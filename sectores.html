@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sectores y Campañas | SAGUA</title>
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body id="page-sectores">
+  <div class="app-layout">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand"><span class="brand-mark">CA</span><span>SAGUA</span></div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="nav-item">Dashboard</a>
+        <a href="sectores.html" class="nav-item active">Sectores y Campañas</a>
+        <a href="mediciones.html" class="nav-item">Mediciones</a>
+        <a href="evidencias.html" class="nav-item">Evidencias</a>
+        <a href="aprobaciones.html" class="nav-item manager-only">Aprobaciones</a>
+        <a href="resultados.html" class="nav-item manager-only">Cálculo de Eficiencia</a>
+      </nav>
+      <div class="user-widget">
+        <div class="user-info">
+          <div class="avatar" id="userAvatar">--</div>
+          <div class="user-details">
+            <strong id="userName">Cargando...</strong>
+            <span id="roleBadge" class="badge">...</span>
+          </div>
+        </div>
+        <button id="logoutBtn" class="btn btn-outline btn-full">Cerrar Sesión</button>
+      </div>
+    </aside>
+    
+    <!-- Contenido -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Configuración: Sectores y Campañas</h1>
+          <p>Gestión de tramos hidráulicos y períodos de monitoreo activo del Canal de San Andrés.</p>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 1: SECTORES -->
+      <h2 style="margin-bottom: 1rem; font-size: 1.3rem; color: var(--primary);">1. Delimitación de Sectores</h2>
+      <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; align-items: start; margin-bottom: 3rem;">
+        
+        <!-- Formulario Sector -->
+        <div class="card">
+          <div class="card-header"><h3>Registrar Nuevo Sector</h3></div>
+          <div class="card-body">
+            <form id="sectorForm" class="form-stack">
+              <div>
+                <label for="codigo">Código Único *</label>
+                <input type="text" id="codigo" required placeholder="Ej. SEC-01">
+              </div>
+              <div>
+                <label for="nombre">Nombre del Sector *</label>
+                <input type="text" id="nombre" required placeholder="Ej. Tramo Bocatoma San Andrés">
+              </div>
+              <div>
+                <label for="longitud_m">Longitud (metros)</label>
+                <input type="number" id="longitud_m" step="0.1" min="0" placeholder="Ej. 450.5">
+              </div>
+              <div>
+                <label for="tipo_revestimiento">Tipo de Revestimiento *</label>
+                <select id="tipo_revestimiento" required>
+                  <option value="sin_clasificar">Sin clasificar</option>
+                  <option value="concreto">Concreto</option>
+                  <option value="tierra">Tierra</option>
+                  <option value="revestimiento_parcial">Revestimiento Parcial</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+              <div>
+                <label for="estado_infraestructura">Estado de Infraestructura *</label>
+                <select id="estado_infraestructura" required>
+                  <option value="sin_evaluar">Sin evaluar</option>
+                  <option value="bueno">Bueno</option>
+                  <option value="regular">Regular</option>
+                  <option value="malo">Malo</option>
+                </select>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                  <label for="latitud">Latitud GPS</label>
+                  <input type="number" id="latitud" step="0.000001" placeholder="-12.543210">
+                </div>
+                <div>
+                  <label for="longitud_gps">Longitud GPS</label>
+                  <input type="number" id="longitud_gps" step="0.000001" placeholder="-76.543210">
+                </div>
+              </div>
+              <div>
+                <label for="descripcion">Descripción / Observaciones</label>
+                <textarea id="descripcion" rows="2" placeholder="Notas topográficas del tramo..."></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary btn-full">Guardar Sector</button>
+              <div id="formMsg" class="form-message" role="alert"></div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Tabla Sectores -->
+        <div class="card">
+          <div class="card-header"><h3>Sectores Registrados</h3></div>
+          <div class="card-body" style="padding:0">
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Código / Nombre</th>
+                    <th>Longitud</th>
+                    <th>Revestimiento</th>
+                    <th>Estado</th>
+                    <th style="text-align:center;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="sectores-table">
+                  <tr><td colspan="5" style="text-align:center; padding: 2rem;">Cargando sectores...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- SECCIÓN 2: CAMPAÑAS DE MONITOREO -->
+      <h2 style="margin-bottom: 1rem; font-size: 1.3rem; color: var(--primary);">2. Campañas de Monitoreo Hídrico</h2>
+      <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; align-items: start;">
+        
+        <!-- Formulario Campaña -->
+        <div class="card">
+          <div class="card-header"><h3>Nueva Campaña de Aforo</h3></div>
+          <div class="card-body">
+            <form id="campanaForm" class="form-stack">
+              <div>
+                <label for="nombre_campana">Nombre de la Campaña *</label>
+                <input type="text" id="nombre_campana" required placeholder="Ej. Campaña Estiaje 2026">
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                  <label for="fecha_inicio">Fecha de Inicio *</label>
+                  <input type="date" id="fecha_inicio" required>
+                </div>
+                <div>
+                  <label for="fecha_fin">Fecha Estimada Fin</label>
+                  <input type="date" id="fecha_fin">
+                </div>
+              </div>
+              <div>
+                <label for="estado_campana">Estado Inicial *</label>
+                <select id="estado_campana" required>
+                  <option value="en_curso">En Curso (Activa)</option>
+                  <option value="planificada">Planificada</option>
+                  <option value="cerrada">Cerrada</option>
+                </select>
+              </div>
+              <div>
+                <label for="obs_campana">Objetivos / Observaciones</label>
+                <textarea id="obs_campana" rows="2" placeholder="Detalles o marco de investigación..."></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary btn-full">Crear Campaña</button>
+              <div id="campanaMsg" class="form-message" role="alert"></div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Tabla Campañas -->
+        <div class="card">
+          <div class="card-header"><h3>Campañas Creadas</h3></div>
+          <div class="card-body" style="padding:0">
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nombre de Campaña</th>
+                    <th>Inicio</th>
+                    <th>Fin</th>
+                    <th>Estado</th>
+                    <th style="text-align:center;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="campanas-table">
+                  <tr><td colspan="5" style="text-align:center; padding: 2rem;">Cargando campañas...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+  <script type="module" src="assets/js/app.js"></script>
+</body>
+</html>

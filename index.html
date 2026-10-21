@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acceso | SAGUA - Canal de San Andrés</title>
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body id="page-login" class="auth-page">
+  <main class="auth-layout">
+    
+    <!-- Panel Izquierdo: Presentación e Identidad -->
+    <section class="auth-story">
+      <div class="brand">
+        <span class="brand-mark">CA</span>
+        <span>CANAL <b>DE SAN ANDRÉS</b></span>
+      </div>
+      
+      <div class="story-content">
+        <span class="eyebrow"><span class="pulse"></span> PLATAFORMA DE GESTIÓN HÍDRICA</span>
+        <h1>Datos claros.<br><em>Decisiones</em> responsables.</h1>
+        <p>Sistema técnico de información para el registro de inspecciones, balance volumétrico y evaluación de eficiencia de conducción hídrica.</p>
+        
+        <div class="story-stats">
+          <div><strong>01</strong><span>Registrar</span></div>
+          <div><strong>02</strong><span>Analizar</span></div>
+          <div><strong>03</strong><span>Optimizar</span></div>
+        </div>
+      </div>
+
+      <div class="story-footer">
+        <span>INVESTIGACIÓN APLICADA · KAWSAY</span>
+        <span>Versión 2.0</span>
+      </div>
+    </section>
+    
+    <!-- Panel Derecho: Formulario de Autenticación -->
+    <section class="auth-panel">
+      <div class="auth-card">
+        <div class="mobile-brand brand">
+          <span class="brand-mark">CA</span>
+          <span>CANAL <b>DE SAN ANDRÉS</b></span>
+        </div>
+        
+        <div class="section-kicker">SISTEMA SAGUA</div>
+        <h2>Acceso al Gestor</h2>
+        <p class="muted">Ingresa tus credenciales institucionales para ingresar.</p>
+        
+        <form id="loginForm" class="form-stack" autocomplete="on">
+          <div>
+            <label for="email">Correo electrónico</label>
+            <input id="email" type="email" required autocomplete="email" placeholder="usuario@institucion.pe">
+          </div>
+          
+          <div>
+            <label for="password">Contraseña de acceso</label>
+            <div class="password-wrap">
+              <input id="password" type="password" required autocomplete="current-password" placeholder="••••••••">
+              <button type="button" class="show-password" id="togglePassword" aria-label="Mostrar u ocultar contraseña">Mostrar</button>
+            </div>
+          </div>
+          
+          <button class="btn btn-primary btn-full" id="loginBtn" type="submit">
+            <span>Ingresar al Sistema</span>
+          </button>
+          
+          <div id="loginMsg" class="form-message" role="alert" aria-live="polite"></div>
+        </form>
+
+        <div class="auth-note">
+          <span class="lock-icon">▣</span>
+          <span>Acceso restringido a personal técnico y gerencial.<br>Los permisos se controlan vía Row Level Security (RLS).</span>
+        </div>
+      </div>
+      
+      <footer class="panel-footer">Canal de San Andrés © 2026 — Proyecto de Investigación KAWSAY</footer>
+    </section>
+
+  </main>
+  <script type="module" src="assets/js/app.js"></script>
+</body>
+</html>

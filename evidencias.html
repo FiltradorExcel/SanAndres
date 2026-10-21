@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Evidencias | SAGUA</title>
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body id="page-evidencias">
+  <div class="app-layout">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand"><span class="brand-mark">CA</span><span>SAGUA</span></div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="nav-item">Dashboard</a>
+        <a href="sectores.html" class="nav-item">Sectores</a>
+        <a href="mediciones.html" class="nav-item">Mediciones</a>
+        <a href="evidencias.html" class="nav-item active">Evidencias</a>
+        <a href="aprobaciones.html" class="nav-item manager-only">Aprobaciones</a>
+        <a href="resultados.html" class="nav-item manager-only">Cálculo de Eficiencia</a>
+      </nav>
+      <div class="user-widget">
+        <div class="user-info">
+          <div class="avatar" id="userAvatar">--</div>
+          <div class="user-details">
+            <strong id="userName">Cargando...</strong>
+            <span id="roleBadge" class="badge">...</span>
+          </div>
+        </div>
+        <button id="logoutBtn" class="btn btn-outline btn-full">Cerrar Sesión</button>
+      </div>
+    </aside>
+    
+    <!-- Contenido -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Repositorio de Evidencias Fotográficas</h1>
+          <p>Documentación visual de inspecciones, filtraciones y estado físico del canal.</p>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; align-items: start;">
+        
+        <!-- Formulario de Carga -->
+        <div class="card">
+          <div class="card-header"><h3>Subir Nueva Evidencia</h3></div>
+          <div class="card-body">
+            <form id="evidenciaForm" class="form-stack">
+              <div>
+                <label for="sector_id">Vincular a Sector *</label>
+                <select id="sector_id" required></select>
+              </div>
+              <div>
+                <label>Fotografía de Campo *</label>
+                <div class="file-drop-area" id="dropArea">
+                  <span id="dropText" style="color:var(--primary); font-weight:600">Haz clic aquí o arrastra la imagen</span>
+                  <input type="file" id="archivo" accept="image/jpeg, image/png, image/webp" required>
+                </div>
+                <img id="preview" class="file-preview" alt="Vista previa">
+              </div>
+              <div>
+                <label for="descripcion">Descripción / Contexto *</label>
+                <textarea id="descripcion" rows="3" required placeholder="Ej. Fisura longitudinal observada en margen izquierda..."></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary btn-full">Subir Fotografía</button>
+              <div id="formMsg" class="form-message" role="alert"></div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Galería y Tabla de Archivos Subidos -->
+        <div class="card">
+          <div class="card-header"><h3>Evidencias Almacenadas</h3></div>
+          <div class="card-body" style="padding:0">
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Vista Previa</th>
+                    <th>Sector / Descripción</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th style="text-align:center;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="evidencias-table">
+                  <tr><td colspan="5" style="text-align:center; padding: 2rem;">Cargando repositorio de archivos...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+  <script type="module" src="assets/js/app.js"></script>
+</body>
+</html>

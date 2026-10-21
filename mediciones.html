@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mediciones | SAGUA</title>
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body id="page-mediciones">
+  <div class="app-layout">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand"><span class="brand-mark">CA</span><span>SAGUA</span></div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="nav-item">Dashboard</a>
+        <a href="sectores.html" class="nav-item">Sectores</a>
+        <a href="mediciones.html" class="nav-item active">Mediciones</a>
+        <a href="evidencias.html" class="nav-item">Evidencias</a>
+        <a href="aprobaciones.html" class="nav-item manager-only">Aprobaciones</a>
+        <a href="resultados.html" class="nav-item manager-only">Cálculo de Eficiencia</a>
+      </nav>
+      <div class="user-widget">
+        <div class="user-info">
+          <div class="avatar" id="userAvatar">--</div>
+          <div class="user-details">
+            <strong id="userName">Cargando...</strong>
+            <span id="roleBadge" class="badge">...</span>
+          </div>
+        </div>
+        <button id="logoutBtn" class="btn btn-outline btn-full">Cerrar Sesión</button>
+      </div>
+    </aside>
+    
+    <!-- Contenido -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Registro de Caudal de Campo</h1>
+          <p>Ingreso y administración de aforos bajo el protocolo del proyecto KAWSAY.</p>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; align-items: start;">
+        
+        <!-- Formulario -->
+        <div class="card">
+          <div class="card-header"><h3>Nueva Medición</h3></div>
+          <div class="card-body">
+            <form id="medicionForm" class="form-stack">
+              <div>
+                <label for="campana_id">Campaña Activa *</label>
+                <select id="campana_id" required></select>
+              </div>
+              <div>
+                <label for="sector_id">Sector Hidráulico *</label>
+                <select id="sector_id" required></select>
+              </div>
+              <div>
+                <label for="punto_medicion">Punto de Medición *</label>
+                <select id="punto_medicion" required>
+                  <option value="entrada">Entrada (Principal)</option>
+                  <option value="salida">Salida (Principal)</option>
+                  <option value="intermedio">Punto Intermedio</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+              <div>
+                <label for="caudal_l_s">Caudal Medido (L/s) *</label>
+                <input type="number" id="caudal_l_s" step="0.01" min="0" required placeholder="Ej. 145.20">
+              </div>
+              <div>
+                <label for="metodo_medicion">Método de Aforo *</label>
+                <input type="text" id="metodo_medicion" required placeholder="Ej. Correntómetro / Flotador">
+              </div>
+              <div>
+                <label for="fecha_hora">Fecha y Hora de Medición *</label>
+                <input type="datetime-local" id="fecha_hora" required>
+              </div>
+              <div>
+                <label for="observaciones">Observaciones de Campo</label>
+                <textarea id="observaciones" rows="2" placeholder="Condiciones de flujo, clima o compuertas..."></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary btn-full">Registrar Medición</button>
+              <div id="formMsg" class="form-message" role="alert"></div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Tabla -->
+        <div class="card">
+          <div class="card-header"><h3>Historial de Mediciones</h3></div>
+          <div class="card-body" style="padding:0">
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Sector</th>
+                    <th>Punto</th>
+                    <th>Caudal</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th style="text-align:center;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="mediciones-table">
+                  <tr><td colspan="6" style="text-align:center; padding: 2rem;">Cargando mediciones...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+  <script type="module" src="assets/js/app.js"></script>
+</body>
+</html>

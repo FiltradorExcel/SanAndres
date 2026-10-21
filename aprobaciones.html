@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aprobaciones | SAGUA</title>
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body id="page-aprobaciones">
+  <div class="app-layout">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand"><span class="brand-mark">CA</span><span>SAGUA</span></div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="nav-item">Dashboard</a>
+        <a href="sectores.html" class="nav-item">Sectores</a>
+        <a href="mediciones.html" class="nav-item">Mediciones</a>
+        <a href="evidencias.html" class="nav-item">Evidencias</a>
+        <a href="aprobaciones.html" class="nav-item manager-only active">Aprobaciones</a>
+        <a href="resultados.html" class="nav-item manager-only">Cálculo de Eficiencia</a>
+      </nav>
+      <div class="user-widget">
+        <div class="user-info">
+          <div class="avatar" id="userAvatar">--</div>
+          <div class="user-details">
+            <strong id="userName">Cargando...</strong>
+            <span id="roleBadge" class="badge">...</span>
+          </div>
+        </div>
+        <button id="logoutBtn" class="btn btn-outline btn-full">Cerrar Sesión</button>
+      </div>
+    </aside>
+
+    <!-- Contenido -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Centro de Aprobaciones y Control de Calidad</h1>
+          <p>Módulo exclusivo de gerencia para revisar, validar o eliminar registros pendientes.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>Mediciones de Caudal Pendientes de Revisión</h3></div>
+        <div class="card-body" style="padding:0">
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Sector</th>
+                  <th>Punto</th>
+                  <th>Caudal Declarado</th>
+                  <th>Fecha Campo</th>
+                  <th>Observación</th>
+                  <th style="text-align:center;">Acciones de Gerencia</th>
+                </tr>
+              </thead>
+              <tbody id="aprobaciones-table">
+                <tr><td colspan="6" style="text-align:center; padding: 2rem;">Cargando datos por revisar...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+  <script type="module" src="assets/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard | SAGUA</title>
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body id="page-dashboard">
+  <div class="app-layout">
+    
+    <!-- Barra Lateral -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand"><span class="brand-mark">CA</span><span>SAGUA</span></div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="nav-item active">Dashboard</a>
+        <a href="sectores.html" class="nav-item">Sectores</a>
+        <a href="mediciones.html" class="nav-item">Mediciones</a>
+        <a href="evidencias.html" class="nav-item">Evidencias</a>
+        <a href="aprobaciones.html" class="nav-item manager-only">Aprobaciones</a>
+        <a href="resultados.html" class="nav-item manager-only">Cálculo de Eficiencia</a>
+      </nav>
+      <div class="user-widget">
+        <div class="user-info">
+          <div class="avatar" id="userAvatar">--</div>
+          <div class="user-details">
+            <strong id="userName">Cargando...</strong>
+            <span id="roleBadge" class="badge">...</span>
+          </div>
+        </div>
+        <button id="logoutBtn" class="btn btn-outline btn-full">Cerrar Sesión</button>
+      </div>
+    </aside>
+
+    <!-- Contenido Principal -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Panel General de Control</h1>
+          <p>Visión consolidada de la infraestructura, mediciones y revisiones pendientes.</p>
+        </div>
+      </div>
+
+      <!-- Tarjetas de Métricas (KPIs) -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-info">
+            <span>Sectores Delimitados</span>
+            <strong id="c-sectores">0</strong>
+          </div>
+          <div class="stat-icon" style="background:#e0f2fe; color:#0284c7">▣</div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-info">
+            <span>Mediciones Totales</span>
+            <strong id="c-mediciones">0</strong>
+          </div>
+          <div class="stat-icon" style="background:#dcfce7; color:#16a34a">≈</div>
+        </div>
+        
+        <div class="stat-card manager-only" style="border-top: 4px solid var(--warning)">
+          <div class="stat-info">
+            <span>Registros Pendientes</span>
+            <strong id="c-pendientes">0</strong>
+          </div>
+          <div class="stat-icon" style="background:#fef3c7; color:#d97706">!</div>
+        </div>
+      </div>
+
+      <!-- Tabla de Mediciones Recientes -->
+      <div class="card">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+          <h3>Últimas Mediciones de Caudal Registradas</h3>
+          <a href="mediciones.html" class="btn btn-outline" style="padding:0.4rem 0.8rem; font-size:0.85rem;">+ Nueva Medición</a>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Sector</th>
+                  <th>Punto</th>
+                  <th>Caudal (L/s)</th>
+                  <th>Fecha Registro</th>
+                  <th>Estado</th>
+                  <th style="text-align:center;">Acción</th>
+                </tr>
+              </thead>
+              <tbody id="recent-table">
+                <tr><td colspan="6" style="text-align:center; padding: 2rem;">Cargando actividad reciente...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="assets/js/app.js"></script>
+</body>
+</html>

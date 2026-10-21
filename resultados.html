@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cálculo de Eficiencia | SAGUA</title>
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body id="page-resultados">
+  <div class="app-layout">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand"><span class="brand-mark">CA</span><span>SAGUA</span></div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="nav-item">Dashboard</a>
+        <a href="sectores.html" class="nav-item">Sectores</a>
+        <a href="mediciones.html" class="nav-item">Mediciones</a>
+        <a href="evidencias.html" class="nav-item">Evidencias</a>
+        <a href="aprobaciones.html" class="nav-item manager-only">Aprobaciones</a>
+        <a href="resultados.html" class="nav-item manager-only active">Cálculo de Eficiencia</a>
+      </nav>
+      <div class="user-widget">
+        <div class="user-info">
+          <div class="avatar" id="userAvatar">--</div>
+          <div class="user-details">
+            <strong id="userName">Cargando...</strong>
+            <span id="roleBadge" class="badge">...</span>
+          </div>
+        </div>
+        <button id="logoutBtn" class="btn btn-outline btn-full">Cerrar Sesión</button>
+      </div>
+    </aside>
+    
+    <!-- Contenido -->
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Cálculo de Eficiencia e Indicadores Hídricos</h1>
+          <p>Procesamiento automatizado de balances de volumen e indicadores de conducción (KAWSAY).</p>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; align-items: start;">
+        
+        <!-- Formulario -->
+        <div class="card">
+          <div class="card-header"><h3>Procesar Balance de Caudal</h3></div>
+          <div class="card-body">
+            <form id="resultadoForm" class="form-stack">
+              <div>
+                <label for="campana_id">Campaña Activa *</label>
+                <select id="campana_id" required></select>
+              </div>
+              <div>
+                <label for="sector_id">Sector a Evaluar *</label>
+                <select id="sector_id" required></select>
+              </div>
+              
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem;">
+                <div>
+                  <label for="caudal_entrada">Q Entrada (L/s) *</label>
+                  <input type="number" id="caudal_entrada" step="0.01" min="0.01" required placeholder="100.00">
+                </div>
+                <div>
+                  <label for="caudal_salida">Q Salida (L/s) *</label>
+                  <input type="number" id="caudal_salida" step="0.01" min="0" required placeholder="85.00">
+                </div>
+                <div>
+                  <label for="caudal_derivado">Q Derivado (L/s)</label>
+                  <input type="number" id="caudal_derivado" step="0.01" min="0" value="0" placeholder="0.00">
+                </div>
+              </div>
+
+              <div>
+                <label for="notas_metodologicas">Notas Metodológicas</label>
+                <textarea id="notas_metodologicas" rows="2" placeholder="Condiciones de sincronización o fuentes de incertidumbre..."></textarea>
+              </div>
+
+              <!-- Vista previa en tiempo real -->
+              <div style="background: var(--bg-light); padding: 1rem; border-radius: 8px; border-left: 4px solid var(--accent);">
+                <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase;">Cálculo Dinámico</div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.25rem;">
+                  <span>Diferencia Aparente:</span> <strong id="prev-dif-aparente">0.00 L/s</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.25rem;">
+                  <span>Diferencia Ajustada:</span> <strong id="prev-dif-ajustada">0.00 L/s</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.95rem; font-weight: 700; color: var(--primary);">
+                  <span>Eficiencia Aparente Conducción:</span> <strong id="prev-eficiencia">0.00%</strong>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-full">Guardar Resultado Evaluado</button>
+              <div id="formMsg" class="form-message" role="alert"></div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Panel de Referencia Técnica KAWSAY -->
+        <div class="card" style="background: var(--primary); color: white;">
+          <div class="card-header" style="background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.1);">
+            <h3 style="color: var(--accent);">Fundamentación Metodológica</h3>
+          </div>
+          <div class="card-body" style="font-size: 0.88rem; line-height: 1.6; opacity: 0.95;">
+            <p style="margin-bottom: 1rem;">
+              • <strong>Diferencia Aparente:</strong> Representa la variación numérica directa entre los caudales de los extremos del tramo. No se interpreta como pérdida física sin verificar derivaciones o filtraciones.
+            </p>
+            <p style="margin-bottom: 1rem;">
+              • <strong>Inclusión de Derivaciones:</strong> Las tomas intermedias activas forman parte de la distribución útil y deben sumarse a las salidas antes de estimar la eficiencia.
+            </p>
+            <p>
+              • <strong>Control de Calidad:</strong> La asignación de permisos e historial de auditoría de este cálculo queda vinculada con el usuario con perfil de gerencia.
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Tabla -->
+      <div class="card">
+        <div class="card-header"><h3>Histórico de Cálculos Guardados</h3></div>
+        <div class="card-body" style="padding:0">
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Sector</th>
+                  <th>Q Entrada</th>
+                  <th>Q Salida</th>
+                  <th>Q Derivado</th>
+                  <th>Eficiencia Aparente</th>
+                  <th>Estado</th>
+                  <th style="text-align:center;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="resultados-table">
+                <tr><td colspan="7" style="text-align:center; padding: 2rem;">Cargando balance de resultados...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+  <script type="module" src="assets/js/app.js"></script>
+</body>
+</html>
