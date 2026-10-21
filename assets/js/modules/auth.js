@@ -1,79 +1,105 @@
-// assets/js/modules/auth.js
+// assets/js/modules/auth.js - Gestión de sesión, roles y salida segura
 import { supabase } from './config.js';
+import { confirmAction } from './ui.js';
 
-/**
- * Verifica la sesión activa del usuario y configura el panel según su rol.
- */
-export async function initAuth(requireSession = true) {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    
-    if (requireSession && (!session || error)) {
+export async function initAuth(requireAuth = true) {
+    const { data: { session } } = await supabase.auth.getSession();
+
+    // Redirecciones según estado de autenticación
+    if (requireAuth && !session) {
         window.location.replace('index.html');
         return null;
     }
-    if (!requireSession && session) {
+
+    if (!requireAuth && session) {
         window.location.replace('dashboard.html');
         return null;
     }
-    if (!session) return null;
 
-    // Obtener rol y perfil del usuario
-    const user = session.user;
-    const [{ data: roleData }, { data: profile }] = await Promise.all([
-        supabase.from('user_roles').select('role').eq('user_id', user.id).maybeSingle(),
-        supabase.from('profiles').select('nombre_completo').eq('id', user.id).maybeSingle()
-    ]);
+    if (session) {
+        // Cargar datos de perfil y rol
+        const { data: profile } = await supabase
+            .from('perfiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
 
-    const role = roleData?.role || 'tecnico';
-    const name = profile?.nombre_completo || user.email;
-
-    // Ajustar visibilidad de la interfaz según rol (Gerencia vs Técnico)
-    document.querySelectorAll('.manager-only').forEach(el => {
-        el.style.display = role === 'gerencia' ? 'flex' : 'none';
-    });
-    
-    const roleBadge = document.getElementById('roleBadge');
-    if (roleBadge) {
-        roleBadge.textContent = role === 'gerencia' ? 'Gerencia' : 'Técnico';
-        roleBadge.className = `badge badge-${role}`;
+        const role = profile?.rol || 'tecnico';
+        
+        // Configurar widget de usuario en la interfaz
+        setupUserUI(session.user, role);
+        
+        return { user: session.user, role, profile };
     }
 
-    const userNameEl = document.getElementById('userName');
-    if (userNameEl) userNameEl.textContent = name;
-    
-    const avatarEl = document.getElementById('userAvatar');
-    if (avatarEl) avatarEl.textContent = name.substring(0, 2).toUpperCase();
+    return null;
+}
 
-    // Evento de cierre de sesión
+function setupUserUI(user, role) {
+    // 1. Mostrar Nombre de usuario
+    const userNameEl = document.getElementById('userName');
+    if (userNameEl) {
+        userNameEl.textContent = user.user_metadata?.nombre_completo || user.email.split('@')[0];
+    }
+
+    // 2. Generar Iniciales para el Avatar
+    const userAvatarEl = document.getElementById('userAvatar');
+    if (userAvatarEl) {
+        const name = user.user_metadata?.nombre_completo || user.email;
+        userAvatarEl.textContent = name.substring(0, 2).toUpperCase();
+    }
+
+    // 3. Renderizar Badge de Rol (Gerencia / Técnico)
+    const roleBadgeEl = document.getElementById('roleBadge');
+    if (roleBadgeEl) {
+        roleBadgeEl.textContent = role.toUpperCase();
+        roleBadgeEl.className = `badge badge-${role}`;
+    }
+
+    // 4. Mostrar opciones exclusivas de Gerencia
+    if (role === 'gerencia') {
+        document.querySelectorAll('.manager-only').forEach(el => {
+            el.style.display = 'flex';
+        });
+    }
+
+    // 5. Configurar Botón 'Cerrar Sesión' con Diálogo de Confirmación
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
-            await supabase.auth.signOut();
-            window.location.replace('index.html');
-        });
-    }
+        logoutBtn.onclick = async (e) => {
+            e.preventDefault();
 
-    return { session, user, role, name };
+            // Mensaje de confirmación
+            const confirmado = confirmAction(
+                "¿Estás seguro de que deseas cerrar sesión?\nSi tienes datos ingresados en algún formulario, se perderán."
+            );
+
+            if (!confirmado) return; // Si el usuario cancela, la sesión se mantiene activa
+
+            logoutBtn.disabled = true;
+            logoutBtn.textContent = "Saliendo...";
+
+            const { error } = await supabase.auth.signOut();
+            if (error) {
+                alert("Error al cerrar sesión: " + error.message);
+                logoutBtn.disabled = false;
+                logoutBtn.textContent = "Cerrar Sesión";
+            } else {
+                // Borrar borradores del localStorage al salir voluntariamente
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('sagua_borrador_')) localStorage.removeItem(key);
+                });
+                window.location.replace('index.html');
+            }
+        };
+    }
 }
 
-/**
- * Inicia sesión con correo y contraseña en Supabase Auth.
- */
 export async function login(email, password) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw new Error("Credenciales inválidas. Verifica tu correo y contraseña.");
+    const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+    });
+    if (error) throw error;
     return data;
 }
-
-// Lógica para mostrar/ocultar contraseña en el formulario de login
-document.addEventListener('DOMContentLoaded', () => {
-    const toggleBtn = document.getElementById('togglePassword');
-    const passInput = document.getElementById('password');
-    if (toggleBtn && passInput) {
-        toggleBtn.addEventListener('click', () => {
-            const type = passInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            passInput.setAttribute('type', type);
-            toggleBtn.textContent = type === 'password' ? 'Mostrar' : 'Ocultar';
-        });
-    }
-});
