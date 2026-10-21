@@ -1,8 +1,57 @@
-// assets/js/app.js - Router principal del sistema con funciones CRUD completas
+// assets/js/app.js - Router principal del sistema con funciones CRUD y auto-guardado temporal (20 min)
 import { initAuth, login } from './modules/auth.js';
 import { supabase } from './modules/config.js';
 import { showMsg, formatDate, getStatusChip, confirmAction } from './modules/ui.js';
 import { CalculadoraHidrica } from './modules/calculadora.js';
+
+// --- SISTEMA DE PERSISTENCIA DE BORRADORES (TTL: 20 MINUTOS) ---
+const TTL_20_MINUTOS = 20 * 60 * 1000;
+
+function habilitarAutoGuardadoFormulario(formId, alRestaurarCallback) {
+    const form = document.getElementById(formId);
+    if (!form) return;
+
+    const claveStorage = `sagua_borrador_${formId}`;
+
+    // 1. Restaurar datos si no han pasado 20 minutos
+    try {
+        const borradorGuardado = localStorage.getItem(claveStorage);
+        if (borradorGuardado) {
+            const { timestamp, datos } = JSON.parse(borradorGuardado);
+            if (Date.now() - timestamp < TTL_20_MINUTOS) {
+                Object.keys(datos).forEach(idCampo => {
+                    const campo = form.querySelector(`#${idCampo}`);
+                    if (campo) campo.value = datos[idCampo];
+                });
+                if (typeof alRestaurarCallback === 'function') {
+                    alRestaurarCallback();
+                }
+            } else {
+                localStorage.removeItem(claveStorage);
+            }
+        }
+    } catch (err) {
+        localStorage.removeItem(claveStorage);
+    }
+
+    // 2. Guardar borrador en tiempo real al escribir o seleccionar
+    form.addEventListener('input', () => {
+        const datos = {};
+        form.querySelectorAll('input, select, textarea').forEach(campo => {
+            if (campo.id && campo.type !== 'password' && campo.type !== 'file') {
+                datos[campo.id] = campo.value;
+            }
+        });
+        localStorage.setItem(claveStorage, JSON.stringify({
+            timestamp: Date.now(),
+            datos
+        }));
+    });
+}
+
+function limpiarBorradorFormulario(formId) {
+    localStorage.removeItem(`sagua_borrador_${formId}`);
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     const page = document.body.id;
@@ -103,6 +152,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('campana_id').innerHTML = '<option value="">Selecciona campaña...</option>' + 
             (campanas || []).map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
 
+        // Habilitar borrador temporal (20 min)
+        habilitarAutoGuardadoFormulario('medicionForm');
+
         // Cargar tabla de mediciones
         const loadMediciones = async () => {
             const { data, error } = await supabase.from('mediciones')
@@ -128,7 +180,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             `).join('') : '<tr><td colspan="6" style="text-align:center; padding:2rem;">No hay mediciones registradas.</td></tr>';
         };
 
-        // Función global de eliminación
         window.eliminarMedicion = async (id) => {
             if (!confirmAction("¿Confirmas la eliminación de esta medición de caudal?")) return;
             const { error } = await supabase.from('mediciones').delete().eq('id', id);
@@ -139,7 +190,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
 
-        // Enviar formulario
         document.getElementById('medicionForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = e.target.querySelector('button[type="submit"]');
@@ -165,6 +215,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 showMsg('formMsg', 'Registro de medición guardado correctamente.', 'success');
                 e.target.reset();
+                limpiarBorradorFormulario('medicionForm');
                 await loadMediciones();
             } catch (err) {
                 showMsg('formMsg', err.message, 'error');
@@ -177,12 +228,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadMediciones();
     }
 
-// ==========================================
+    // ==========================================
     // PÁGINA: SECTORES Y CAMPAÑAS (sectores.html)
     // ==========================================
     else if (page === 'page-sectores') {
         const auth = await initAuth(true);
         if (!auth) return;
+
+        // Habilitar borrador temporal para ambos formularios
+        habilitarAutoGuardadoFormulario('sectorForm');
+        habilitarAutoGuardadoFormulario('campanaForm');
 
         // --- 1. LÓGICA DE SECTORES ---
         const loadSectores = async () => {
@@ -240,6 +295,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 showMsg('formMsg', 'Sector registrado correctamente.', 'success');
                 e.target.reset();
+                limpiarBorradorFormulario('sectorForm');
                 await loadSectores();
             } catch (err) {
                 showMsg('formMsg', err.message, 'error');
@@ -301,6 +357,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 showMsg('campanaMsg', 'Campaña creada exitosamente.', 'success');
                 e.target.reset();
+                limpiarBorradorFormulario('campanaForm');
                 await loadCampanas();
             } catch (err) {
                 showMsg('campanaMsg', err.message, 'error');
@@ -310,7 +367,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-        // Cargar ambas tablas al iniciar
         await Promise.all([loadSectores(), loadCampanas()]);
     }
 
@@ -320,7 +376,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     else if (page === 'page-evidencias') {
         const auth = await initAuth(true);
         if (!auth) return;
-        
+
         const { data: sectores } = await supabase.from('sectores').select('id, nombre').eq('activo', true).order('nombre');
         document.getElementById('sector_id').innerHTML = '<option value="">Selecciona sector...</option>' + 
             (sectores || []).map(s => `<option value="${s.id}">${s.nombre}</option>`).join('');
@@ -338,7 +394,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-        // Cargar galería/tabla de evidencias
         const loadEvidencias = async () => {
             const { data, error } = await supabase.from('archivos_sector')
                 .select('id, ruta_archivo, nombre_original, descripcion, creado_en, estado_revision, sectores(nombre)')
@@ -371,26 +426,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             }).join('') : '<tr><td colspan="5" style="text-align:center; padding:2rem;">No hay fotografías subidas.</td></tr>';
         };
 
-        // Eliminar archivo de Storage y registro de Base de Datos
         window.eliminarEvidencia = async (id, rutaArchivo) => {
             if (!confirmAction("¿Deseas eliminar permanentemente esta evidencia fotográfica?")) return;
 
-            // 1. Eliminar archivo físico de Supabase Storage
             const { error: storageError } = await supabase.storage.from('canal-evidencias').remove([rutaArchivo]);
-            if (storageError) {
-                console.warn("Advertencia en Storage:", storageError.message);
-            }
+            if (storageError) console.warn("Advertencia en Storage:", storageError.message);
 
-            // 2. Eliminar registro en la tabla de la base de datos
             const { error: dbError } = await supabase.from('archivos_sector').delete().eq('id', id);
-            if (dbError) {
-                alert("Error al eliminar registro: " + dbError.message);
-            } else {
-                await loadEvidencias();
-            }
+            if (dbError) alert("Error al eliminar registro: " + dbError.message);
+            else await loadEvidencias();
         };
 
-        // Formulario de carga
         document.getElementById('evidenciaForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = e.target.querySelector('button');
@@ -408,11 +454,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const fileExt = file.name.split('.').pop();
                 const fileName = `${sectorId}/${Date.now()}.${fileExt}`;
 
-                // 1. Subir imagen a Storage
                 const { error: uploadError } = await supabase.storage.from('canal-evidencias').upload(fileName, file);
                 if (uploadError) throw uploadError;
 
-                // 2. Insertar metadatos en DB
                 const { error: dbError } = await supabase.from('archivos_sector').insert([{
                     sector_id: sectorId,
                     ruta_archivo: fileName,
@@ -529,7 +573,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('campana_id').innerHTML = '<option value="">Selecciona campaña...</option>' + 
             (campanas || []).map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
 
-        // Cálculo automático dinámico en tiempo real
+        // Cálculo dinámico en tiempo real
         const updatePreview = () => {
             const qIn = parseFloat(document.getElementById('caudal_entrada').value) || 0;
             const qOut = parseFloat(document.getElementById('caudal_salida').value) || 0;
@@ -542,10 +586,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     document.getElementById('prev-dif-ajustada').textContent = `${res.diferenciaAjustada_ls} L/s`;
                     document.getElementById('prev-eficiencia').textContent = `${res.eficienciaAparente_pct}%`;
                 } catch (err) {
-                    // Si los valores no son válidos aún, mantener ceros
+                    // Mantener ceros si la entrada no es válida
                 }
             }
         };
+
+        // Activar borrador temporal y actualizar la vista previa al restaurar datos
+        habilitarAutoGuardadoFormulario('resultadoForm', updatePreview);
 
         ['caudal_entrada', 'caudal_salida', 'caudal_derivado'].forEach(id => {
             const el = document.getElementById(id);
@@ -579,18 +626,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             `).join('') : '<tr><td colspan="7" style="text-align:center; padding:2rem;">No hay cálculos guardados.</td></tr>';
         };
 
-        // Función para eliminar resultado
         window.eliminarResultado = async (id) => {
             if (!confirmAction("¿Deseas eliminar este cálculo guardado de la base de datos?")) return;
             const { error } = await supabase.from('resultados_calculo').delete().eq('id', id);
-            if (error) {
-                alert("Error al eliminar resultado: " + error.message);
-            } else {
-                await loadResultados();
-            }
+            if (error) alert("Error al eliminar resultado: " + error.message);
+            else await loadResultados();
         };
 
-        // Enviar formulario
         document.getElementById('resultadoForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = e.target.querySelector('button[type="submit"]');
@@ -624,6 +666,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 showMsg('formMsg', 'Cálculo de eficiencia evaluado y guardado con éxito.', 'success');
                 e.target.reset();
+                limpiarBorradorFormulario('resultadoForm');
                 updatePreview();
                 await loadResultados();
             } catch (err) {
