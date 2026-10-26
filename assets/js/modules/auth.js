@@ -45,35 +45,71 @@ export async function initAuth(requireSession = true) {
     const avatarEl = document.getElementById('userAvatar');
     if (avatarEl) avatarEl.textContent = name.substring(0, 2).toUpperCase();
 
-    // Evento de cierre de sesión con diálogo de confirmación y limpieza de borradores
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
-            const confirmado = confirmAction(
-                "¿Estás seguro de que deseas cerrar sesión?\nSi tienes datos ingresados sin guardar, se perderán."
-            );
-
-            if (!confirmado) return; // Cancela la salida si el usuario presiona "Cancelar"
-
-            logoutBtn.disabled = true;
-            logoutBtn.textContent = 'Saliendo...';
-
-            const { error: signOutError } = await supabase.auth.signOut();
-            if (signOutError) {
-                alert("Error al cerrar sesión: " + signOutError.message);
-                logoutBtn.disabled = false;
-                logoutBtn.textContent = 'Cerrar Sesión';
-            } else {
-                // Eliminar borradores temporales de auto-guardado al salir voluntariamente
-                Object.keys(localStorage).forEach(key => {
-                    if (key.startsWith('sagua_borrador_')) localStorage.removeItem(key);
-                });
-                window.location.replace('index.html');
-            }
-        });
-    }
+    // Configuración del desplegable interactivo de Perfil / Logout
+    setupProfileDropdown();
 
     return { session, user, role, name };
+}
+
+/**
+ * Encapsula el botón de logout en un menú flotante y gestiona el clic interactivo.
+ */
+function setupProfileDropdown() {
+    const userWidget = document.querySelector('.user-widget');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    if (!userWidget || !logoutBtn) return;
+
+    // Encapsular botón en contenedor desplegable dinámico si aún no existe
+    let dropdown = userWidget.querySelector('.user-dropdown-menu');
+    if (!dropdown) {
+        dropdown = document.createElement('div');
+        dropdown.className = 'user-dropdown-menu';
+        logoutBtn.parentNode.insertBefore(dropdown, logoutBtn);
+        dropdown.appendChild(logoutBtn);
+    }
+
+    // Alternar visibilidad al presionar en la zona del perfil
+    userWidget.onclick = (e) => {
+        // Ignorar clics internos en el menú que no sean el botón de salida
+        if (e.target.closest('.user-dropdown-menu') && e.target !== logoutBtn) return;
+        if (e.target === logoutBtn) return;
+
+        userWidget.classList.toggle('open');
+    };
+
+    // Cerrar el menú si el usuario hace clic fuera de la tarjeta de perfil
+    document.addEventListener('click', (e) => {
+        if (!userWidget.contains(e.target)) {
+            userWidget.classList.remove('open');
+        }
+    });
+
+    // Acción del botón Cerrar Sesión
+    logoutBtn.onclick = async (e) => {
+        e.stopPropagation();
+        const confirmado = confirmAction(
+            "¿Estás seguro de que deseas cerrar sesión?\nSi tienes datos ingresados sin guardar, se perderán."
+        );
+
+        if (!confirmado) return;
+
+        logoutBtn.disabled = true;
+        logoutBtn.textContent = 'Saliendo...';
+
+        const { error: signOutError } = await supabase.auth.signOut();
+        if (signOutError) {
+            alert("Error al cerrar sesión: " + signOutError.message);
+            logoutBtn.disabled = false;
+            logoutBtn.textContent = 'Cerrar Sesión';
+        } else {
+            // Limpiar borradores al cerrar sesión
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('sagua_borrador_')) localStorage.removeItem(key);
+            });
+            window.location.replace('index.html');
+        }
+    };
 }
 
 /**
