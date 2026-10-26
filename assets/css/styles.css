@@ -1065,3 +1065,86 @@ tbody tr:last-child td {
     padding: 1rem 0.85rem;
   }
 }
+
+
+/* ==========================================================================
+   DESPLEGABLE DE PERFIL Y BOTÓN DE CERRAR SESIÓN (MENU POPUP)
+   ========================================================================== */
+
+.user-widget {
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+  border-radius: var(--radius-md);
+}
+
+.user-widget:hover {
+  background-color: var(--primary-subtle);
+}
+
+/* Indicador visual de toque (flecha sutil) */
+.user-widget::after {
+  content: '▾';
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+/* Menú flotante oculto por defecto */
+.user-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 0.5rem;
+  min-width: 170px;
+  display: none;
+  z-index: 1000;
+}
+
+/* Estado desplegado al hacer clic en el perfil */
+.user-widget.open .user-dropdown-menu {
+  display: block;
+  animation: popIn 0.15s ease-out;
+}
+
+.user-dropdown-menu .btn {
+  width: 100% !important;
+  font-size: 0.8rem !important;
+  padding: 0.45rem 0.75rem !important;
+  color: var(--danger-text) !important;
+  border-color: var(--danger-border) !important;
+  background-color: var(--danger-bg) !important;
+}
+
+.user-dropdown-menu .btn:hover {
+  background-color: var(--danger) !important;
+  color: white !important;
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Ajustes responsivos para pantallas de celular (< 1024px) */
+@media (max-width: 1024px) {
+  .user-widget {
+    padding: 0.35rem 0.65rem !important;
+  }
+  
+  .user-dropdown-menu {
+    top: calc(100% + 0.25rem);
+    right: 0.5rem;
+  }
+}
