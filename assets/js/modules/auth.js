@@ -8,14 +8,18 @@ import { confirmAction } from './ui.js';
 export async function initAuth(requireSession = true) {
     const { data: { session }, error } = await supabase.auth.getSession();
     
+    // Si la página requiere sesión y no hay una activa -> Regresar a login
     if (requireSession && (!session || error)) {
         window.location.replace('index.html');
         return null;
     }
+    
+    // Si la página NO requiere sesión (ej. index.html) y SÍ hay una activa -> Ir al dashboard
     if (!requireSession && session) {
         window.location.replace('dashboard.html');
         return null;
     }
+    
     if (!session) return null;
 
     // Obtener rol y perfil del usuario
@@ -60,7 +64,6 @@ function setupProfileDropdown() {
 
     if (!userWidget || !logoutBtn) return;
 
-    // Encapsular botón en contenedor desplegable dinámico si aún no existe
     let dropdown = userWidget.querySelector('.user-dropdown-menu');
     if (!dropdown) {
         dropdown = document.createElement('div');
@@ -69,28 +72,21 @@ function setupProfileDropdown() {
         dropdown.appendChild(logoutBtn);
     }
 
-    // Alternar visibilidad al presionar en la zona del perfil
     userWidget.onclick = (e) => {
-        // Ignorar clics internos en el menú que no sean el botón de salida
         if (e.target.closest('.user-dropdown-menu') && e.target !== logoutBtn) return;
         if (e.target === logoutBtn) return;
-
         userWidget.classList.toggle('open');
     };
 
-    // Cerrar el menú si el usuario hace clic fuera de la tarjeta de perfil
     document.addEventListener('click', (e) => {
         if (!userWidget.contains(e.target)) {
             userWidget.classList.remove('open');
         }
     });
 
-    // Acción del botón Cerrar Sesión
     logoutBtn.onclick = async (e) => {
         e.stopPropagation();
-        const confirmado = confirmAction(
-            "¿Estás seguro de que deseas cerrar sesión?\nSi tienes datos ingresados sin guardar, se perderán."
-        );
+        const confirmado = confirmAction("¿Estás seguro de que deseas cerrar sesión?");
 
         if (!confirmado) return;
 
@@ -103,7 +99,6 @@ function setupProfileDropdown() {
             logoutBtn.disabled = false;
             logoutBtn.textContent = 'Cerrar Sesión';
         } else {
-            // Limpiar borradores al cerrar sesión
             Object.keys(localStorage).forEach(key => {
                 if (key.startsWith('sagua_borrador_')) localStorage.removeItem(key);
             });
@@ -120,16 +115,3 @@ export async function login(email, password) {
     if (error) throw new Error("Credenciales inválidas. Verifica tu correo y contraseña.");
     return data;
 }
-
-// Lógica para mostrar/ocultar contraseña en el formulario de login
-document.addEventListener('DOMContentLoaded', () => {
-    const toggleBtn = document.getElementById('togglePassword');
-    const passInput = document.getElementById('password');
-    if (toggleBtn && passInput) {
-        toggleBtn.addEventListener('click', () => {
-            const type = passInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            passInput.setAttribute('type', type);
-            toggleBtn.textContent = type === 'password' ? 'Mostrar' : 'Ocultar';
-        });
-    }
-});
