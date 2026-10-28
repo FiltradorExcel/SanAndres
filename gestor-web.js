@@ -9,6 +9,9 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentUser = null;
 
+// Avatar por defecto vectorial inline (evita error 404)
+const DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='%23cbd5e1'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E";
+
 // ==========================================
 // UTILIDADES (UI y Carga)
 // ==========================================
@@ -41,28 +44,30 @@ document.querySelectorAll('.nav-item').forEach(btn => {
 });
 
 const userWidget = document.getElementById('userMenuBtn');
-const logoutBtn = document.createElement('button');
-logoutBtn.className = 'btn';
-logoutBtn.textContent = 'Cerrar Sesión';
-const dropdown = document.createElement('div');
-dropdown.className = 'user-dropdown-menu';
-dropdown.appendChild(logoutBtn);
-userWidget.appendChild(dropdown);
+if (userWidget) {
+    const logoutBtn = document.createElement('button');
+    logoutBtn.className = 'btn';
+    logoutBtn.textContent = 'Cerrar Sesión';
+    const dropdown = document.createElement('div');
+    dropdown.className = 'user-dropdown-menu';
+    dropdown.appendChild(logoutBtn);
+    userWidget.appendChild(dropdown);
 
-userWidget.addEventListener('click', (e) => {
-    if (e.target === logoutBtn) return;
-    userWidget.classList.toggle('open');
-});
-document.addEventListener('click', (e) => {
-    if (!userWidget.contains(e.target)) userWidget.classList.remove('open');
-});
+    userWidget.addEventListener('click', (e) => {
+        if (e.target === logoutBtn) return;
+        userWidget.classList.toggle('open');
+    });
+    document.addEventListener('click', (e) => {
+        if (!userWidget.contains(e.target)) userWidget.classList.remove('open');
+    });
 
-logoutBtn.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    if (!confirmAction("¿Deseas cerrar sesión en el Gestor Web?")) return;
-    await supabase.auth.signOut();
-    window.location.replace('index.html'); 
-});
+    logoutBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!confirmAction("¿Deseas cerrar sesión en el Gestor Web?")) return;
+        await supabase.auth.signOut();
+        window.location.replace('index.html'); 
+    });
+}
 
 // ==========================================
 // MÓDULO 1: INSTITUCIONAL
@@ -85,13 +90,15 @@ async function cargarInstitucional() {
         document.getElementById('inst_mapa').value = data.mapa_url || '';
         if (data.logo_url) {
             const preview = document.getElementById('previewLogo');
-            preview.src = data.logo_url;
-            preview.classList.remove('hidden');
+            if (preview) {
+                preview.src = data.logo_url;
+                preview.classList.remove('hidden');
+            }
         }
     }
 }
 
-document.getElementById('formInstitucional').addEventListener('submit', async (e) => {
+document.getElementById('formInstitucional')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     showLoader();
     try {
@@ -152,9 +159,10 @@ async function cargarDirectorio() {
     if (error) console.error("Error al cargar directorio:", error);
 
     const tbody = document.getElementById('tablaDirectorio');
+    if (!tbody) return;
     tbody.innerHTML = data && data.length > 0 ? data.map(d => `
         <tr>
-            <td><img src="${d.foto_url || 'assets/img/placeholder.png'}" alt="Foto" style="width:40px;height:40px;object-fit:cover;border-radius:50%;"></td>
+            <td><img src="${d.foto_url || DEFAULT_AVATAR}" alt="Foto" style="width:40px;height:40px;object-fit:cover;border-radius:50%;"></td>
             <td><strong>${d.nombre_completo}</strong><br><small>${d.cargo}</small></td>
             <td>${d.orden_jerarquia}</td>
             <td style="text-align:center;">
@@ -165,7 +173,7 @@ async function cargarDirectorio() {
     `).join('') : '<tr><td colspan="4" style="text-align:center;">No hay directivos.</td></tr>';
 }
 
-document.getElementById('formDirectorio').addEventListener('submit', async (e) => {
+document.getElementById('formDirectorio')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     showLoader();
     try {
@@ -228,7 +236,7 @@ window.editarDirectivo = async (id) => {
     }
 };
 
-document.getElementById('btnCancelarDir').addEventListener('click', () => {
+document.getElementById('btnCancelarDir')?.addEventListener('click', () => {
     document.getElementById('formDirectorio').reset();
     document.getElementById('dir_id').value = '';
     document.getElementById('btnCancelarDir').classList.add('hidden');
@@ -262,6 +270,7 @@ async function cargarGaleria() {
     if (error) console.error("Error al cargar galería:", error);
 
     const grid = document.getElementById('gridGaleria');
+    if (!grid) return;
     grid.innerHTML = data && data.length > 0 ? data.map(g => `
         <div class="galeria-item">
             <img src="${g.imagen_url}" alt="${g.titulo}">
@@ -274,7 +283,7 @@ async function cargarGaleria() {
     `).join('') : '<p style="grid-column: 1 / -1;">No hay imágenes en la galería.</p>';
 }
 
-document.getElementById('formGaleria').addEventListener('submit', async (e) => {
+document.getElementById('formGaleria')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     showLoader();
     try {
@@ -334,6 +343,7 @@ async function cargarNoticias() {
     if (error) console.error("Error al cargar noticias:", error);
 
     const tbody = document.getElementById('tablaNoticias');
+    if (!tbody) return;
     tbody.innerHTML = data && data.length > 0 ? data.map(n => {
         const dateStr = new Date(n.creado_en).toLocaleDateString();
         return `
@@ -349,7 +359,7 @@ async function cargarNoticias() {
     `}).join('') : '<tr><td colspan="4" style="text-align:center;">No hay noticias publicadas.</td></tr>';
 }
 
-document.getElementById('formNoticia').addEventListener('submit', async (e) => {
+document.getElementById('formNoticia')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     showLoader();
     try {
@@ -404,7 +414,7 @@ window.editarNoticia = async (id) => {
     }
 };
 
-document.getElementById('btnCancelarNoticia').addEventListener('click', () => {
+document.getElementById('btnCancelarNoticia')?.addEventListener('click', () => {
     document.getElementById('formNoticia').reset();
     document.getElementById('not_id').value = '';
     document.getElementById('btnCancelarNoticia').classList.add('hidden');
@@ -435,6 +445,7 @@ async function cargarComunicados() {
     if (error) console.error("Error al cargar comunicados:", error);
 
     const tbody = document.getElementById('tablaComunicados');
+    if (!tbody) return;
     tbody.innerHTML = data && data.length > 0 ? data.map(c => `
         <tr>
             <td><span class="text-ellipsis" title="${c.titulo}"><strong>${c.titulo}</strong></span></td>
@@ -448,16 +459,24 @@ async function cargarComunicados() {
     `).join('') : '<tr><td colspan="4" style="text-align:center;">No hay comunicados registrados.</td></tr>';
 }
 
-document.getElementById('formComunicado').addEventListener('submit', async (e) => {
+document.getElementById('formComunicado')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     showLoader();
     try {
         const id = document.getElementById('com_id').value;
-        const estado = document.getElementById('com_estado').value;
+        const titulo = document.getElementById('com_titulo').value.trim();
+        const contenido = document.getElementById('com_contenido').value.trim();
+        const prioridad = document.getElementById('com_prioridad').value.toLowerCase();
+        const estado = document.getElementById('com_estado').value.toLowerCase();
+
+        if (titulo.length < 3) {
+            throw new Error("El título debe tener al menos 3 caracteres.");
+        }
+
         const payload = {
-            titulo: document.getElementById('com_titulo').value,
-            contenido: document.getElementById('com_contenido').value,
-            prioridad: document.getElementById('com_prioridad').value,
+            titulo: titulo,
+            contenido: contenido,
+            prioridad: prioridad,
             estado: estado,
             fecha_publicacion: estado === 'publicado' ? new Date().toISOString() : null
         };
@@ -480,7 +499,7 @@ document.getElementById('formComunicado').addEventListener('submit', async (e) =
         document.getElementById('btnCancelarComunicado').classList.add('hidden');
         cargarComunicados();
     } catch (err) { 
-        showToast(err.message, "error"); 
+        showToast("Error: " + err.message, "error"); 
         console.error(err);
     } finally { 
         hideLoader(); 
@@ -503,7 +522,7 @@ window.editarComunicado = async (id) => {
     }
 };
 
-document.getElementById('btnCancelarComunicado').addEventListener('click', () => {
+document.getElementById('btnCancelarComunicado')?.addEventListener('click', () => {
     document.getElementById('formComunicado').reset();
     document.getElementById('com_id').value = '';
     document.getElementById('btnCancelarComunicado').classList.add('hidden');
@@ -538,7 +557,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     currentUser = session.user;
     
-    // Carga inicial de todos los módulos
     cargarInstitucional();
     cargarDirectorio();
     cargarGaleria();
