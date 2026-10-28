@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gestor Web | Canal San Andrés</title>
+  <link rel="stylesheet" href="gestor-web.css">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Overlay de carga global -->
+  <div id="globalLoader" class="loader-overlay"><div class="spinner"></div></div>
+
+  <!-- Contenedor de Toasts -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <div class="app-layout">
+    
+    <!-- Header / Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand"><span class="brand-mark">WEB</span><span>San Andrés</span></div>
+      </div>
+      
+      <nav class="sidebar-nav">
+  <button class="nav-item active" data-target="sec-institucional">Institucional</button>
+  <button class="nav-item" data-target="sec-directorio">Directorio</button>
+  <button class="nav-item" data-target="sec-galeria">Galería</button>
+  <button class="nav-item" data-target="sec-noticias">Noticias</button>
+  <button class="nav-item" data-target="sec-comunicados">Comunicados</button>
+  <button class="nav-item" onclick="window.location.href='dashboard.html'" style="margin-top: 2rem; color: var(--danger); border: 1px solid var(--danger);">← Volver a SAGUA</button>
+</nav>
+
+      <div class="user-widget" id="userMenuBtn">
+        <div class="user-info">
+          <div class="avatar" id="userAvatar">SA</div>
+          <div class="user-details">
+            <strong id="userName">Admin Web</strong>
+            <span class="badge badge-gerencia">GESTOR</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+    
+    <!-- Contenido Principal -->
+    <main class="main-content">
+      <div class="page-header">
+        <h1>Gestor de Contenido Web</h1>
+        <p>Administra la información pública, directivos, galería, noticias y comunicados del portal.</p>
+      </div>
+
+      <!-- SECCIÓN 1: INSTITUCIONAL -->
+      <section id="sec-institucional" class="tab-content active">
+        <div class="card">
+          <div class="card-header"><h3>Información Institucional</h3></div>
+          <div class="card-body">
+            <form id="formInstitucional" class="form-grid">
+              <input type="hidden" id="inst_id">
+              <div class="full-width">
+                <label>Nombre de la Entidad</label>
+                <input type="text" id="inst_nombre" required>
+              </div>
+              <div>
+                <label>Teléfono / Celular</label>
+                <input type="text" id="inst_telefono">
+              </div>
+              <div>
+                <label>Email de Contacto</label>
+                <input type="email" id="inst_email">
+              </div>
+              <div class="full-width">
+                <label>Dirección Física</label>
+                <input type="text" id="inst_direccion">
+              </div>
+              <div>
+                <label>Horario de Atención</label>
+                <input type="text" id="inst_horario" placeholder="Ej: Lun - Vie 8:00am a 5:00pm">
+              </div>
+              <div>
+                <label>Enlace Facebook</label>
+                <input type="url" id="inst_facebook">
+              </div>
+              <div class="full-width">
+                <label>Misión</label>
+                <textarea id="inst_mision" rows="3"></textarea>
+              </div>
+              <div class="full-width">
+                <label>Visión</label>
+                <textarea id="inst_vision" rows="3"></textarea>
+              </div>
+              <div class="full-width">
+                <label>URL Google Maps (Iframe SRC)</label>
+                <input type="url" id="inst_mapa">
+              </div>
+              
+              <!-- Subida de Logo -->
+              <div class="full-width">
+                <label>Logo Institucional</label>
+                <div class="file-upload-wrapper">
+                  <img id="previewLogo" class="img-preview hidden" alt="Logo actual" style="max-height: 100px; margin-bottom: 10px;">
+                  <input type="file" id="inst_logo" accept="image/*">
+                </div>
+              </div>
+              
+              <div class="full-width">
+                <button type="submit" class="btn btn-primary btn-full">Guardar Cambios Institucionales</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECCIÓN 2: DIRECTORIO -->
+      <section id="sec-directorio" class="tab-content">
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; align-items: start;">
+          <div class="card">
+            <div class="card-header"><h3>Agregar Directivo</h3></div>
+            <div class="card-body">
+              <form id="formDirectorio" class="form-stack">
+                <input type="hidden" id="dir_id">
+                <div>
+                  <label>Nombre Completo *</label>
+                  <input type="text" id="dir_nombre" required>
+                </div>
+                <div>
+                  <label>Cargo / Puesto *</label>
+                  <input type="text" id="dir_cargo" required placeholder="Ej. Presidente">
+                </div>
+                <div>
+                  <label>Orden de Jerarquía (1 es mayor)</label>
+                  <input type="number" id="dir_orden" value="0">
+                </div>
+                <div>
+                  <label>Descripción / Perfil</label>
+                  <textarea id="dir_desc" rows="2"></textarea>
+                </div>
+                <div>
+                  <label>Fotografía</label>
+                  <input type="file" id="dir_foto" accept="image/*">
+                </div>
+                <div style="display: flex; gap: 10px;">
+                  <button type="submit" class="btn btn-primary btn-full" id="btnGuardarDir">Guardar</button>
+                  <button type="button" class="btn btn-outline hidden" id="btnCancelarDir">Cancelar</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h3>Junta Directiva Activa</h3></div>
+            <div class="card-body" style="padding:0">
+              <div class="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Foto</th>
+                      <th>Nombre y Cargo</th>
+                      <th>Orden</th>
+                      <th style="text-align:center;">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaDirectorio"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECCIÓN 3: GALERÍA -->
+      <section id="sec-galeria" class="tab-content">
+        <div class="card" style="margin-bottom: 2rem;">
+          <div class="card-header"><h3>Subir Nueva Imagen a Galería</h3></div>
+          <div class="card-body">
+            <form id="formGaleria" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 200px;">
+                <label>Título / Leyenda *</label>
+                <input type="text" id="gal_titulo" required>
+              </div>
+              <div style="flex: 1; min-width: 150px;">
+                <label>Categoría</label>
+                <select id="gal_categoria">
+                  <option value="general">General</option>
+                  <option value="infraestructura">Infraestructura</option>
+                  <option value="mantenimiento">Mantenimiento</option>
+                  <option value="eventos">Eventos</option>
+                </select>
+              </div>
+              <div style="flex: 1; min-width: 200px;">
+                <label>Imagen *</label>
+                <input type="file" id="gal_imagen" required accept="image/*">
+              </div>
+              <div>
+                <button type="submit" class="btn btn-primary">Subir Imagen</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="grid-galeria" id="gridGaleria"></div>
+      </section>
+
+      <!-- SECCIÓN 4: NOTICIAS -->
+      <section id="sec-noticias" class="tab-content">
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; align-items: start;">
+          <div class="card">
+            <div class="card-header"><h3>Publicar Noticia</h3></div>
+            <div class="card-body">
+              <form id="formNoticia" class="form-stack">
+                <input type="hidden" id="not_id">
+                <div>
+                  <label>Título *</label>
+                  <input type="text" id="not_titulo" required>
+                </div>
+                <div>
+                  <label>Resumen Corto</label>
+                  <textarea id="not_resumen" rows="2"></textarea>
+                </div>
+                <div>
+                  <label>Contenido Completo *</label>
+                  <textarea id="not_contenido" rows="5" required></textarea>
+                </div>
+                <div>
+                  <label>Estado</label>
+                  <select id="not_estado">
+                    <option value="borrador">Borrador</option>
+                    <option value="publicado">Publicado</option>
+                    <option value="archivado">Archivado</option>
+                  </select>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                  <button type="submit" class="btn btn-primary btn-full">Guardar</button>
+                  <button type="button" class="btn btn-outline hidden" id="btnCancelarNoticia">Cancelar</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h3>Listado de Noticias</h3></div>
+            <div class="card-body" style="padding:0">
+              <div class="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Título</th>
+                      <th>Fecha</th>
+                      <th>Estado</th>
+                      <th style="text-align:center;">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaNoticias"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECCIÓN 5: COMUNICADOS -->
+      <section id="sec-comunicados" class="tab-content">
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; align-items: start;">
+          <div class="card">
+            <div class="card-header"><h3>Emitir Comunicado</h3></div>
+            <div class="card-body">
+              <form id="formComunicado" class="form-stack">
+                <input type="hidden" id="com_id">
+                <div>
+                  <label>Asunto / Título *</label>
+                  <input type="text" id="com_titulo" required>
+                </div>
+                <div>
+                  <label>Contenido *</label>
+                  <textarea id="com_contenido" rows="5" required></textarea>
+                </div>
+                <div>
+                  <label>Prioridad</label>
+                  <select id="com_prioridad">
+                    <option value="normal">Normal</option>
+                    <option value="alta">Alta</option>
+                    <option value="urgente">Urgente</option>
+                    <option value="baja">Baja</option>
+                  </select>
+                </div>
+                <div>
+                  <label>Estado</label>
+                  <select id="com_estado">
+                    <option value="borrador">Borrador</option>
+                    <option value="publicado">Publicado</option>
+                    <option value="archivado">Archivado</option>
+                  </select>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                  <button type="submit" class="btn btn-primary btn-full">Guardar</button>
+                  <button type="button" class="btn btn-outline hidden" id="btnCancelarComunicado">Cancelar</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h3>Registro de Comunicados</h3></div>
+            <div class="card-body" style="padding:0">
+              <div class="table-responsive">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Asunto</th>
+                      <th>Prioridad</th>
+                      <th>Estado</th>
+                      <th style="text-align:center;">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaComunicados"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script type="module" src="gestor-web.js"></script>
+</body>
+</html>
