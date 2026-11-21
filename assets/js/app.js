@@ -410,7 +410,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return `
                     <tr>
                         <td>
-                            <img src="${publicUrl}" alt="Evidencia" style="width:50px; height:50px; object-fit:cover; border-radius:6px;" onerror="this.src='assets/img/placeholder.png'">
+                            <img src="${publicUrl}" alt="Evidencia"
+     style="width:50px; height:50px; object-fit:cover; border-radius:6px; background:#e2e8f0;"
+     onerror="this.onerror=null; this.style.opacity='0.3';">
                         </td>
                         <td>
                             <strong>${item.sectores?.nombre || 'Sector'}</strong><br>
