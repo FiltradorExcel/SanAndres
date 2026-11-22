@@ -552,133 +552,271 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ==========================================
-    // PÁGINA: RESULTADOS (resultados.html)
+    // PÁGINA: RESULTADOS Y AFORO DEL CANAL
     // ==========================================
     else if (page === 'page-resultados') {
         const auth = await initAuth(true);
         if (!auth) return;
 
         if (auth.role !== 'gerencia') {
-            document.querySelector('.main-content').innerHTML = '<div class="card"><div class="card-body"><h2>Acceso Restringido</h2><p>Este módulo es exclusivo para usuarios con perfil de Gerencia.</p></div></div>';
+            document.querySelector('.main-content').innerHTML = `
+                <div class="card"><div class="card-body">
+                    <h2>Acceso restringido</h2>
+                    <p>Este módulo es exclusivo para usuarios con perfil de Gerencia.</p>
+                </div></div>`;
             return;
         }
 
-        // Cargar sectores y campañas
-        const [{ data: sectores }, { data: campanas }] = await Promise.all([
-            supabase.from('sectores').select('id, codigo, nombre').eq('activo', true).order('codigo'),
-            supabase.from('campanas').select('id, nombre').in('estado', ['planificada', 'en_curso']).order('fecha_inicio', { ascending: false })
-        ]);
+        const $ = (id) => document.getElementById(id);
+        const form = $('aforoForm');
+        const tbody = $('aforos-table');
+        const comparacionBody = $('comparacion-table');
+        const campaignSelect = $('campana_id');
+        const sectorSelect = $('sector_id');
 
-        document.getElementById('sector_id').innerHTML = '<option value="">Selecciona sector...</option>' + 
-            (sectores || []).map(s => `<option value="${s.id}">${s.codigo} - ${s.nombre}</option>`).join('');
-            
-        document.getElementById('campana_id').innerHTML = '<option value="">Selecciona campaña...</option>' + 
-            (campanas || []).map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+        const { data: sectores, error: sectoresError } = await supabase
+            .from('sectores')
+            .select('id, codigo, nombre, longitud_m, orden_canal, progresiva_inicio_m, progresiva_fin_m')
+            .eq('activo', true)
+            .order('codigo', { ascending: true });
 
-        // Cálculo dinámico en tiempo real
-        const updatePreview = () => {
-            const qIn = parseFloat(document.getElementById('caudal_entrada').value) || 0;
-            const qOut = parseFloat(document.getElementById('caudal_salida').value) || 0;
-            const qDer = parseFloat(document.getElementById('caudal_derivado').value) || 0;
+        const { data: campanas, error: campanasError } = await supabase
+            .from('campanas')
+            .select('id, nombre, estado, fecha_inicio')
+            .in('estado', ['planificada', 'en_curso'])
+            .order('fecha_inicio', { ascending: false });
 
-            if (qIn > 0) {
-                try {
-                    const res = CalculadoraHidrica.calcularIndicadores(qIn, qOut, qDer);
-                    document.getElementById('prev-dif-aparente').textContent = `${res.diferenciaAparente_ls} L/s`;
-                    document.getElementById('prev-dif-ajustada').textContent = `${res.diferenciaAjustada_ls} L/s`;
-                    document.getElementById('prev-eficiencia').textContent = `${res.eficienciaAparente_pct}%`;
-                } catch (err) {
-                    // Mantener ceros si la entrada no es válida
-                }
-            }
-        };
+        if (sectoresError) {
+            showMsg('formMsg', `No se pudieron cargar los sectores: ${sectoresError.message}`, 'error');
+            return;
+        }
+        if (campanasError) {
+            showMsg('formMsg', `No se pudieron cargar las campañas: ${campanasError.message}`, 'error');
+            return;
+        }
 
-        // Activar borrador temporal y actualizar la vista previa al restaurar datos
-        habilitarAutoGuardadoFormulario('resultadoForm', updatePreview);
-
-        ['caudal_entrada', 'caudal_salida', 'caudal_derivado'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.addEventListener('input', updatePreview);
+        const sectoresOrdenados = (sectores || []).sort((a, b) => {
+            const oa = a.orden_canal ?? Number.MAX_SAFE_INTEGER;
+            const ob = b.orden_canal ?? Number.MAX_SAFE_INTEGER;
+            return oa - ob || String(a.codigo).localeCompare(String(b.codigo), 'es', { numeric: true });
         });
 
-        // Cargar historial de resultados
-        const loadResultados = async () => {
-            const { data, error } = await supabase.from('resultados_calculo')
-                .select('id, caudal_entrada_l_s, caudal_salida_l_s, caudal_derivado_l_s, eficiencia_aparente_pct, estado_revision, sectores(nombre)')
-                .order('calculado_en', { ascending: false });
+        campaignSelect.innerHTML = '<option value="">Selecciona campaña...</option>' +
+            (campanas || []).map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join('');
 
-            const tbody = document.getElementById('resultados-table');
-            if (error) {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">Error: ${error.message}</td></tr>`;
+        sectorSelect.innerHTML = '<option value="">Selecciona sector...</option>' +
+            sectoresOrdenados.map(s => {
+                const progresiva = s.progresiva_inicio_m != null && s.progresiva_fin_m != null
+                    ? ` · ${Number(s.progresiva_inicio_m).toFixed(2)}–${Number(s.progresiva_fin_m).toFixed(2)} m`
+                    : (s.longitud_m != null ? ` · ${Number(s.longitud_m).toFixed(2)} m de longitud` : '');
+                return `<option value="${s.id}">${escapeHtml(s.codigo)} - ${escapeHtml(s.nombre)}${progresiva}</option>`;
+            }).join('');
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[ch]));
+        }
+
+        const num = (id) => {
+            const value = Number($(id).value);
+            return Number.isFinite(value) ? value : 0;
+        };
+        const fmt = (value, digits = 2) => Number(value).toLocaleString('es-PE', {
+            minimumFractionDigits: digits, maximumFractionDigits: digits
+        });
+
+        function getAforoInput() {
+            return {
+                ancho: num('ancho_m'),
+                profundidad: num('profundidad_m'),
+                distancia: num('distancia_m'),
+                tiempo: num('tiempo_s'),
+                coeficiente: num('coeficiente'),
+                recorridos: num('cantidad_recorridos')
+            };
+        }
+
+        function updateAforoPreview() {
+            const d = getAforoInput();
+            const valid = d.ancho > 0 && d.profundidad > 0 && d.distancia > 0 &&
+                d.tiempo > 0 && d.coeficiente > 0 && d.coeficiente <= 1.2;
+
+            if (!valid) {
+                $('prev-area').textContent = '— m²';
+                $('prev-velocidad').textContent = '— m/s';
+                $('prev-caudal').textContent = '— L/s';
+                $('prev-calidad').textContent = 'Completa los datos para calcular';
                 return;
             }
 
-            tbody.innerHTML = data?.length ? data.map(r => `
+            try {
+                const result = CalculadoraHidrica.calcularAforoFlotador(
+                    d.ancho, d.profundidad, d.distancia, d.tiempo, d.coeficiente
+                );
+                $('prev-area').textContent = `${fmt(result.area_m2, 3)} m²`;
+                $('prev-velocidad').textContent = `${fmt(result.velocidad_media_ms, 3)} m/s`;
+                $('prev-caudal').textContent = `${fmt(result.caudal_l_s)} L/s`;
+                $('prev-calidad').textContent = d.recorridos >= 3
+                    ? `${d.recorridos} recorridos registrados; revisar dispersión de tiempos`
+                    : 'Estimación preliminar: se recomienda realizar al menos 3 recorridos';
+            } catch (error) {
+                $('prev-calidad').textContent = error.message;
+            }
+        }
+
+        habilitarAutoGuardadoFormulario('aforoForm', updateAforoPreview);
+        ['ancho_m', 'profundidad_m', 'distancia_m', 'tiempo_s', 'coeficiente', 'cantidad_recorridos']
+            .forEach(id => $(id)?.addEventListener('input', updateAforoPreview));
+
+        const loadAforos = async () => {
+            const { data, error } = await supabase.from('mediciones')
+                .select('id, campana_id, sector_id, punto_medicion, fecha_hora, caudal_l_s, metodo_medicion, observaciones, estado_revision, detalle_aforo, sectores(codigo, nombre, longitud_m, orden_canal)')
+                .order('fecha_hora', { ascending: false });
+
+            if (error) {
+                tbody.innerHTML = `<tr><td colspan="8">Error al cargar aforos: ${escapeHtml(error.message)}</td></tr>`;
+                comparacionBody.innerHTML = '';
+                return;
+            }
+
+            const campaignNames = Object.fromEntries((campanas || []).map(c => [c.id, c.nombre]));
+            const campaignFilter = $('filtro-campana').value;
+            const selected = (data || []).filter(r => !campaignFilter || r.campana_id === campaignFilter);
+
+            tbody.innerHTML = selected.length ? selected.map(r => `
                 <tr>
-                    <td><strong>${r.sectores?.nombre || 'N/A'}</strong></td>
-                    <td>${r.caudal_entrada_l_s} L/s</td>
-                    <td>${r.caudal_salida_l_s} L/s</td>
-                    <td>${r.caudal_derivado_l_s} L/s</td>
-                    <td><strong style="color:var(--primary); font-size:1rem;">${r.eficiencia_aparente_pct}%</strong></td>
+                    <td><strong>${escapeHtml(r.sectores?.codigo || '—')}</strong><br><small>${escapeHtml(r.sectores?.nombre || 'Sector')}</small></td>
+                    <td>${escapeHtml(campaignNames[r.campana_id] || 'Campaña')}</td>
+                    <td>${fmt(r.caudal_l_s)} L/s</td>
+                    <td>${r.detalle_aforo?.ancho_m != null ? `${fmt(r.detalle_aforo.ancho_m)} × ${fmt(r.detalle_aforo.profundidad_m)} m` : '—'}</td>
+                    <td>${r.detalle_aforo?.distancia_m != null ? `${fmt(r.detalle_aforo.distancia_m)} m / ${fmt(r.detalle_aforo.tiempo_s)} s` : '—'}</td>
+                    <td>${formatDate(r.fecha_hora)}</td>
                     <td>${getStatusChip(r.estado_revision)}</td>
-                    <td style="text-align:center;">
-                        <button onclick="window.eliminarResultado('${r.id}')" class="btn btn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem; color:var(--danger); border-color:#fecaca;">Eliminar</button>
-                    </td>
-                </tr>
-            `).join('') : '<tr><td colspan="7" style="text-align:center; padding:2rem;">No hay cálculos guardados.</td></tr>';
+                    <td style="text-align:center"><button onclick="window.eliminarAforo('${r.id}')" class="btn btn-outline btn-small">Eliminar</button></td>
+                </tr>`).join('') :
+                '<tr><td colspan="8" style="text-align:center;padding:1.5rem">No hay aforos registrados para esta selección.</td></tr>';
+
+            // Comparación de lecturas del mismo canal, dentro de una misma campaña.
+            // Se toma la lectura más reciente de cada sector para evitar duplicar sectores.
+            const campaignForCompare = $('filtro-campana').value;
+            if (!campaignForCompare) {
+                comparacionBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:1rem">Selecciona una campaña para comparar sus sectores.</td></tr>';
+                return;
+            }
+
+            const latestBySector = new Map();
+            (data || []).filter(r => r.campana_id === campaignForCompare).forEach(r => {
+                const current = latestBySector.get(r.sector_id);
+                if (!current || new Date(r.fecha_hora) > new Date(current.fecha_hora)) {
+                    latestBySector.set(r.sector_id, r);
+                }
+            });
+
+            const rows = [...latestBySector.values()].sort((a, b) => {
+                const oa = a.sectores?.orden_canal ?? Number.MAX_SAFE_INTEGER;
+                const ob = b.sectores?.orden_canal ?? Number.MAX_SAFE_INTEGER;
+                return oa - ob || String(a.sectores?.codigo || '').localeCompare(String(b.sectores?.codigo || ''), 'es', { numeric: true });
+            });
+
+            comparacionBody.innerHTML = rows.length ? rows.map((r, index) => {
+                const previous = rows[index - 1];
+                const delta = previous ? Number(r.caudal_l_s) - Number(previous.caudal_l_s) : null;
+                const pct = previous && Number(previous.caudal_l_s) !== 0
+                    ? (delta / Number(previous.caudal_l_s)) * 100 : null;
+                const variation = delta == null ? 'Punto inicial' :
+                    `${delta > 0 ? '+' : ''}${fmt(delta)} L/s (${pct > 0 ? '+' : ''}${fmt(pct)}%)`;
+                return `<tr>
+                    <td><strong>${escapeHtml(r.sectores?.codigo || '—')}</strong> - ${escapeHtml(r.sectores?.nombre || '')}</td>
+                    <td>${fmt(r.caudal_l_s)} L/s</td>
+                    <td>${variation}</td>
+                    <td>${formatDate(r.fecha_hora)}</td>
+                    <td>${getStatusChip(r.estado_revision)}</td>
+                </tr>`;
+            }).join('') : '<tr><td colspan="5" style="text-align:center;padding:1rem">Todavía no hay mediciones en esta campaña.</td></tr>';
         };
 
-        window.eliminarResultado = async (id) => {
-            if (!confirmAction("¿Deseas eliminar este cálculo guardado de la base de datos?")) return;
-            const { error } = await supabase.from('resultados_calculo').delete().eq('id', id);
-            if (error) alert("Error al eliminar resultado: " + error.message);
-            else await loadResultados();
+        $('filtro-campana').addEventListener('change', loadAforos);
+
+        window.eliminarAforo = async (id) => {
+            if (!confirmAction('¿Deseas eliminar este aforo? Esta acción no se puede deshacer.')) return;
+            const { error } = await supabase.from('mediciones').delete().eq('id', id);
+            if (error) alert(`No se pudo eliminar: ${error.message}`);
+            else await loadAforos();
         };
 
-        document.getElementById('resultadoForm').addEventListener('submit', async (e) => {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = e.target.querySelector('button[type="submit"]');
-            btn.disabled = true; 
-            btn.textContent = 'Procesando...';
+            const btn = form.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.textContent = 'Guardando aforo...';
 
             try {
-                const qIn = parseFloat(document.getElementById('caudal_entrada').value);
-                const qOut = parseFloat(document.getElementById('caudal_salida').value);
-                const qDer = parseFloat(document.getElementById('caudal_derivado').value) || 0;
+                const sector = sectoresOrdenados.find(s => s.id === sectorSelect.value);
+                const campaign = (campanas || []).find(c => c.id === campaignSelect.value);
+                if (!sector || !campaign) throw new Error('Selecciona una campaña y un sector válidos.');
 
-                const calc = CalculadoraHidrica.calcularIndicadores(qIn, qOut, qDer);
+                const d = getAforoInput();
+                const calc = CalculadoraHidrica.calcularAforoFlotador(
+                    d.ancho, d.profundidad, d.distancia, d.tiempo, d.coeficiente
+                );
+                const fecha = $('fecha_hora').value || new Date().toISOString();
 
-                const payload = {
-                    campana_id: document.getElementById('campana_id').value,
-                    sector_id: document.getElementById('sector_id').value,
-                    caudal_entrada_l_s: qIn,
-                    caudal_salida_l_s: qOut,
-                    caudal_derivado_l_s: qDer,
-                    diferencia_aparente_l_s: calc.diferenciaAparente_ls,
-                    diferencia_ajustada_l_s: calc.diferenciaAjustada_ls,
-                    diferencia_porcentual: calc.diferenciaPorcentual,
-                    eficiencia_aparente_pct: calc.eficienciaAparente_pct,
-                    notas_metodologicas: document.getElementById('notas_metodologicas').value.trim() || null,
-                    calculado_por: auth.user.id,
-                    estado_revision: 'aprobado'
+                const detalle = {
+                    metodo: 'flotador',
+                    ancho_m: d.ancho,
+                    profundidad_m: d.profundidad,
+                    distancia_m: d.distancia,
+                    tiempo_s: d.tiempo,
+                    coeficiente: d.coeficiente,
+                    cantidad_recorridos: d.recorridos,
+                    area_m2: calc.area_m2,
+                    area_aproximada: true,
+                    velocidad_superficial_ms: calc.velocidad_superficial_ms,
+                    velocidad_media_ms: calc.velocidad_media_ms,
+                    caudal_m3_s: calc.caudal_m3_s,
+                    caudal_l_s: calc.caudal_l_s,
+                    calidad: d.recorridos >= 3 ? 'revisar_repetibilidad' : 'preliminar',
+                    nota_metodologica: 'Área aproximada ancho × profundidad; sección irregular no levantada mediante perfiles.'
                 };
 
-                const { error } = await supabase.from('resultados_calculo').insert([payload]);
+                const payload = {
+                    campana_id: campaign.id,
+                    sector_id: sector.id,
+                    punto_medicion: $('punto_medicion').value.trim() || 'aforo_sector',
+                    fecha_hora: fecha,
+                    caudal_l_s: calc.caudal_l_s,
+                    metodo_medicion: 'Método del flotador; estimación de velocidad media mediante coeficiente',
+                    observaciones: $('observaciones').value.trim() || null,
+                    registrado_por: auth.user.id,
+                    estado_revision: 'pendiente',
+                    detalle_aforo: detalle
+                };
+
+                const { error } = await supabase.from('mediciones').insert([payload]);
                 if (error) throw error;
 
-                showMsg('formMsg', 'Cálculo de eficiencia evaluado y guardado con éxito.', 'success');
-                e.target.reset();
-                limpiarBorradorFormulario('resultadoForm');
-                updatePreview();
-                await loadResultados();
-            } catch (err) {
-                showMsg('formMsg', err.message, 'error');
+                showMsg('formMsg', `Aforo estimado en ${fmt(calc.caudal_l_s)} L/s y guardado para revisión.`, 'success');
+                form.reset();
+                $('coeficiente').value = '0.85';
+                $('cantidad_recorridos').value = '1';
+                $('fecha_hora').value = new Date().toISOString().slice(0, 16);
+                limpiarBorradorFormulario('aforoForm');
+                updateAforoPreview();
+                await loadAforos();
+            } catch (error) {
+                showMsg('formMsg', error.message, 'error');
             } finally {
-                btn.disabled = false; 
-                btn.textContent = 'Guardar Resultado Evaluado';
+                btn.disabled = false;
+                btn.textContent = 'Calcular y guardar aforo';
             }
         });
 
-        await loadResultados();
+        $('filtro-campana').innerHTML = '<option value="">Selecciona campaña para comparar...</option>' +
+            (campanas || []).map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join('');
+
+        $('fecha_hora').value = new Date().toISOString().slice(0, 16);
+        await loadAforos();
+        updateAforoPreview();
     }
 });
