@@ -21,7 +21,7 @@
         <a href="mediciones.html" class="nav-item">Mediciones</a>
         <a href="evidencias.html" class="nav-item">Evidencias</a>
         <a href="aprobaciones.html" class="nav-item manager-only">Aprobaciones</a>
-        <a href="resultados.html" class="nav-item manager-only">Cálculo de Eficiencia</a>
+        <a href="resultados.html" class="nav-item manager-only">Análisis del Canal</a>
       </nav>
       <div class="user-widget">
         <div class="user-info">
@@ -152,6 +152,9 @@
                   <input type="date" id="fecha_fin">
                 </div>
               </div>
+              <small style="color: var(--text-muted); display:block; margin-top:-0.5rem;">
+                Si defines fecha fin, la campaña pasará a <strong>cerrada</strong> automáticamente al cumplirse esa fecha. También puedes cerrarla manualmente desde la tabla.
+              </small>
               <div>
                 <label for="estado_campana">Estado Inicial *</label>
                 <select id="estado_campana" required>
