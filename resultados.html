@@ -3,25 +3,43 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Cálculo de Eficiencia | SAGUA</title>
+  <title>Aforo y análisis del canal | SAGUA</title>
   <link rel="stylesheet" href="assets/css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .results-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:1.25rem;align-items:start;margin-bottom:1.25rem}
+    .field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+    .field-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .field{min-width:0}.field label{display:block;margin-bottom:.4rem;font-weight:600}
+    .field input,.field select,.field textarea{width:100%;min-width:0}
+    .hint{font-size:.78rem;color:var(--text-muted);line-height:1.5;margin-top:.3rem}
+    .preview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem;margin:1rem 0}
+    .metric{padding:1rem;border-radius:10px;background:var(--bg-light);min-width:0}
+    .metric span{display:block;font-size:.75rem;color:var(--text-muted);margin-bottom:.35rem}
+    .metric strong{font-size:1.2rem;color:var(--primary);overflow-wrap:anywhere}
+    .method-card{background:var(--primary);color:white}
+    .method-card h3{color:var(--accent)}
+    .method-card p{font-size:.88rem;line-height:1.65;margin:.65rem 0}
+    .section-heading{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap}
+    .filter-control{max-width:340px;width:100%}
+    .table-responsive{overflow-x:auto}
+    .table-responsive table{min-width:760px}
+    .status-note{font-size:.8rem;color:var(--text-muted);line-height:1.55}
+    @media(max-width:900px){.results-grid{grid-template-columns:1fr}}
+    @media(max-width:600px){.field-grid,.field-grid.three{grid-template-columns:1fr}.preview-grid{grid-template-columns:1fr}.page-header h1{font-size:1.45rem}.filter-control{max-width:none}}
+  </style>
 </head>
 <body id="page-resultados">
   <div class="app-layout">
-    
-    <!-- Sidebar -->
     <aside class="sidebar">
-      <div class="sidebar-header">
-        <div class="brand"><span class="brand-mark">CA</span><span>SAGUA</span></div>
-      </div>
+      <div class="sidebar-header"><div class="brand"><span class="brand-mark">CA</span><span>SAGUA</span></div></div>
       <nav class="sidebar-nav">
         <a href="dashboard.html" class="nav-item">Dashboard</a>
         <a href="sectores.html" class="nav-item">Sectores</a>
         <a href="mediciones.html" class="nav-item">Mediciones</a>
         <a href="evidencias.html" class="nav-item">Evidencias</a>
         <a href="aprobaciones.html" class="nav-item manager-only">Aprobaciones</a>
-        <a href="resultados.html" class="nav-item manager-only active">Cálculo de Eficiencia</a>
+        <a href="resultados.html" class="nav-item manager-only active">Aforo y análisis</a>
       </nav>
       <div class="user-widget">
         <div class="user-info">
@@ -31,120 +49,142 @@
             <span id="roleBadge" class="badge">...</span>
           </div>
         </div>
-        <button id="logoutBtn" class="btn btn-outline btn-full">Cerrar Sesión</button>
+        <button id="logoutBtn" class="btn btn-outline btn-full">Cerrar sesión</button>
       </div>
     </aside>
-    
-    <!-- Contenido -->
+
     <main class="main-content">
       <div class="page-header">
         <div>
-          <h1>Cálculo de Eficiencia e Indicadores Hídricos</h1>
-          <p>Procesamiento automatizado de balances de volumen e indicadores de conducción (KAWSAY).</p>
+          <h1>Aforo y análisis del canal</h1>
+          <p>Estimación del caudal por sectores consecutivos de un mismo canal y comparación por campaña.</p>
         </div>
       </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; align-items: start;">
-        
-        <!-- Formulario -->
-        <div class="card">
-          <div class="card-header"><h3>Procesar Balance de Caudal</h3></div>
+      <div class="card" style="margin-bottom:1.25rem">
+        <div class="card-body">
+          <strong>Cómo se organiza la información</strong>
+          <p class="status-note" style="margin:.4rem 0 0">Los sectores representan tramos ordenados de un único canal. Cada aforo queda asociado a un sector y una campaña. Al comparar sectores se observa la variación del caudal entre puntos; no se declara automáticamente que esa variación sea una pérdida física.</p>
+        </div>
+      </div>
+
+      <div class="results-grid">
+        <section class="card">
+          <div class="card-header"><h3>Registrar aforo por flotador</h3></div>
           <div class="card-body">
-            <form id="resultadoForm" class="form-stack">
-              <div>
-                <label for="campana_id">Campaña Activa *</label>
-                <select id="campana_id" required></select>
+            <form id="aforoForm" class="form-stack">
+              <div class="field-grid">
+                <div class="field">
+                  <label for="campana_id">Campaña *</label>
+                  <select id="campana_id" required><option value="">Cargando campañas...</option></select>
+                </div>
+                <div class="field">
+                  <label for="sector_id">Sector del canal *</label>
+                  <select id="sector_id" required><option value="">Cargando sectores...</option></select>
+                </div>
               </div>
-              <div>
-                <label for="sector_id">Sector a Evaluar *</label>
-                <select id="sector_id" required></select>
+              <div class="field-grid">
+                <div class="field">
+                  <label for="punto_medicion">Identificación del punto</label>
+                  <input id="punto_medicion" type="text" maxlength="100" placeholder="Ej. Punto medio del sector 1">
+                </div>
+                <div class="field">
+                  <label for="fecha_hora">Fecha y hora</label>
+                  <input id="fecha_hora" type="datetime-local">
+                </div>
               </div>
-              
-              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem;">
-                <div>
-                  <label for="caudal_entrada">Q Entrada (L/s) *</label>
-                  <input type="number" id="caudal_entrada" step="0.01" min="0.01" required placeholder="100.00">
+              <div class="field-grid three">
+                <div class="field">
+                  <label for="ancho_m">Ancho húmedo (m) *</label>
+                  <input id="ancho_m" type="number" min="0.001" step="0.001" required placeholder="0.80">
                 </div>
-                <div>
-                  <label for="caudal_salida">Q Salida (L/s) *</label>
-                  <input type="number" id="caudal_salida" step="0.01" min="0" required placeholder="85.00">
+                <div class="field">
+                  <label for="profundidad_m">Profundidad (m) *</label>
+                  <input id="profundidad_m" type="number" min="0.001" step="0.001" required placeholder="0.35">
                 </div>
-                <div>
-                  <label for="caudal_derivado">Q Derivado (L/s)</label>
-                  <input type="number" id="caudal_derivado" step="0.01" min="0" value="0" placeholder="0.00">
+                <div class="field">
+                  <label for="distancia_m">Distancia (m) *</label>
+                  <input id="distancia_m" type="number" min="0.01" step="0.01" required placeholder="5.00">
                 </div>
+              </div>
+              <div class="field-grid three">
+                <div class="field">
+                  <label for="tiempo_s">Tiempo (s) *</label>
+                  <input id="tiempo_s" type="number" min="0.01" step="0.01" required placeholder="10.00">
+                </div>
+                <div class="field">
+                  <label for="coeficiente">Coeficiente de velocidad *</label>
+                  <input id="coeficiente" type="number" min="0.01" max="1.2" step="0.01" value="0.85" required>
+                  <p class="hint">0.85 es un valor provisional configurable, no una constante universal.</p>
+                </div>
+                <div class="field">
+                  <label for="cantidad_recorridos">N.º de recorridos</label>
+                  <input id="cantidad_recorridos" type="number" min="1" step="1" value="1">
+                </div>
+              </div>
+              <div class="field">
+                <label for="observaciones">Observaciones de campo</label>
+                <textarea id="observaciones" rows="2" placeholder="Estado del flujo, viento, obstáculos, condiciones del canal..."></textarea>
               </div>
 
               <div>
-                <label for="notas_metodologicas">Notas Metodológicas</label>
-                <textarea id="notas_metodologicas" rows="2" placeholder="Condiciones de sincronización o fuentes de incertidumbre..."></textarea>
+                <strong>Resultado calculado en tiempo real</strong>
+                <div class="preview-grid">
+                  <div class="metric"><span>Área aproximada</span><strong id="prev-area">— m²</strong></div>
+                  <div class="metric"><span>Velocidad media estimada</span><strong id="prev-velocidad">— m/s</strong></div>
+                  <div class="metric"><span>Caudal estimado</span><strong id="prev-caudal">— L/s</strong></div>
+                </div>
+                <p id="prev-calidad" class="hint">Completa los datos para calcular.</p>
               </div>
-
-              <!-- Vista previa en tiempo real -->
-              <div style="background: var(--bg-light); padding: 1rem; border-radius: 8px; border-left: 4px solid var(--accent);">
-                <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase;">Cálculo Dinámico</div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.25rem;">
-                  <span>Diferencia Aparente:</span> <strong id="prev-dif-aparente">0.00 L/s</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.25rem;">
-                  <span>Diferencia Ajustada:</span> <strong id="prev-dif-ajustada">0.00 L/s</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.95rem; font-weight: 700; color: var(--primary);">
-                  <span>Eficiencia Aparente Conducción:</span> <strong id="prev-eficiencia">0.00%</strong>
-                </div>
-              </div>
-
-              <button type="submit" class="btn btn-primary btn-full">Guardar Resultado Evaluado</button>
+              <button type="submit" class="btn btn-primary btn-full">Calcular y guardar aforo</button>
               <div id="formMsg" class="form-message" role="alert"></div>
             </form>
           </div>
-        </div>
+        </section>
 
-        <!-- Panel de Referencia Técnica KAWSAY -->
-        <div class="card" style="background: var(--primary); color: white;">
-          <div class="card-header" style="background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.1);">
-            <h3 style="color: var(--accent);">Fundamentación Metodológica</h3>
+        <aside class="card method-card">
+          <div class="card-header"><h3>Fundamento del cálculo</h3></div>
+          <div class="card-body">
+            <p><strong>1. Área aproximada:</strong> A = ancho húmedo × profundidad. Es una aproximación rectangular; en una sección irregular no representa el área real exacta.</p>
+            <p><strong>2. Velocidad superficial:</strong> Vs = distancia recorrida ÷ tiempo.</p>
+            <p><strong>3. Velocidad media estimada:</strong> Vm = Vs × coeficiente de corrección.</p>
+            <p><strong>4. Caudal:</strong> Q = A × Vm. El resultado se convierte de m³/s a L/s.</p>
+            <hr style="border-color:rgba(255,255,255,.18);margin:1rem 0">
+            <p><strong>Control de calidad:</strong> una sola profundidad y un recorrido generan una estimación preliminar. Se recomienda medir varias profundidades a lo ancho del canal y repetir al menos tres recorridos.</p>
+            <p><strong>Interpretación:</strong> comparar caudales entre sectores consecutivos requiere considerar derivaciones, aportes laterales, variaciones temporales y sincronización de las mediciones.</p>
           </div>
-          <div class="card-body" style="font-size: 0.88rem; line-height: 1.6; opacity: 0.95;">
-            <p style="margin-bottom: 1rem;">
-              • <strong>Diferencia Aparente:</strong> Representa la variación numérica directa entre los caudales de los extremos del tramo. No se interpreta como pérdida física sin verificar derivaciones o filtraciones.
-            </p>
-            <p style="margin-bottom: 1rem;">
-              • <strong>Inclusión de Derivaciones:</strong> Las tomas intermedias activas forman parte de la distribución útil y deben sumarse a las salidas antes de estimar la eficiencia.
-            </p>
-            <p>
-              • <strong>Control de Calidad:</strong> La asignación de permisos e historial de auditoría de este cálculo queda vinculada con el usuario con perfil de gerencia.
-            </p>
-          </div>
-        </div>
-
+        </aside>
       </div>
 
-      <!-- Tabla -->
-      <div class="card">
-        <div class="card-header"><h3>Histórico de Cálculos Guardados</h3></div>
+      <section class="card" style="margin-bottom:1.25rem">
+        <div class="card-header section-heading">
+          <h3>Comparación de caudal por sectores</h3>
+          <select id="filtro-campana" class="filter-control">
+            <option value="">Selecciona campaña para comparar...</option>
+          </select>
+        </div>
         <div class="card-body" style="padding:0">
           <div class="table-responsive">
             <table>
-              <thead>
-                <tr>
-                  <th>Sector</th>
-                  <th>Q Entrada</th>
-                  <th>Q Salida</th>
-                  <th>Q Derivado</th>
-                  <th>Eficiencia Aparente</th>
-                  <th>Estado</th>
-                  <th style="text-align:center;">Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="resultados-table">
-                <tr><td colspan="7" style="text-align:center; padding: 2rem;">Cargando balance de resultados...</td></tr>
-              </tbody>
+              <thead><tr><th>Orden del canal</th><th>Caudal registrado</th><th>Variación respecto al sector anterior</th><th>Fecha</th><th>Estado</th></tr></thead>
+              <tbody id="comparacion-table"><tr><td colspan="5" style="text-align:center;padding:1rem">Selecciona una campaña.</td></tr></tbody>
             </table>
           </div>
         </div>
-      </div>
+        <div class="card-body"><p class="status-note">La variación mostrada es una diferencia numérica entre las lecturas más recientes de cada sector de la campaña seleccionada. No equivale por sí sola a una pérdida de agua ni a una eficiencia validada del tramo.</p></div>
+      </section>
 
+      <section class="card">
+        <div class="card-header"><h3>Historial de aforos registrados</h3></div>
+        <div class="card-body" style="padding:0">
+          <div class="table-responsive">
+            <table>
+              <thead><tr><th>Sector</th><th>Campaña</th><th>Caudal</th><th>Sección usada</th><th>Flotador</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
+              <tbody id="aforos-table"><tr><td colspan="8" style="text-align:center;padding:1.5rem">Cargando aforos...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
   <script type="module" src="assets/js/app.js"></script>
