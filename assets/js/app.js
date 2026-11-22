@@ -1,10 +1,18 @@
-// assets/js/app.js - Router principal del sistema SAGUA
+// assets/js/app.js - Router principal completo del sistema SAGUA
 import { initAuth, login } from './modules/auth.js';
 import { supabase } from './modules/config.js';
 import { showMsg, formatDate, getStatusChip, confirmAction } from './modules/ui.js';
 import { CalculadoraHidrica } from './modules/calculadora.js';
 
 const TTL_20_MINUTOS = 20 * 60 * 1000;
+
+function obtenerFechaLocalISO() {
+    const hoy = new Date();
+    const y = hoy.getFullYear();
+    const m = String(hoy.getMonth() + 1).padStart(2, '0');
+    const d = String(hoy.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
 
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, ch => ({
@@ -156,8 +164,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const [{ data: sectores }, { data: campanas }] = await Promise.all([
             supabase.from('sectores').select('id, codigo, nombre, orden_canal').eq('activo', true).order('codigo'),
-            supabase.from('campanas').select('id, nombre, estado').in('estado', ['planificada', 'en_curso']).order('fecha_inicio', { ascending: false })
+            supabase.from('campanas').select('id, nombre, estado, fecha_fin').in('estado', ['planificada', 'en_curso']).order('fecha_inicio', { ascending: false })
         ]);
+
+        const hoy = obtenerFechaLocalISO();
+        const vencidasIds = (campanas || [])
+            .filter(c => c.fecha_fin && c.fecha_fin < hoy)
+            .map(c => c.id);
+
+        if (vencidasIds.length > 0) {
+            await supabase.from('campanas').update({ estado: 'cerrada' }).in('id', vencidasIds);
+        }
+
+        const campanasVigentes = (campanas || []).filter(c => !vencidasIds.includes(c.id));
 
         const sectoresOrdenados = (sectores || []).sort((a, b) => {
             const oa = a.orden_canal ?? Number.MAX_SAFE_INTEGER;
@@ -168,8 +187,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         $('sector_id').innerHTML = '<option value="">Selecciona sector...</option>' +
             sectoresOrdenados.map(s => `<option value="${s.id}">${escapeHtml(s.codigo)} - ${escapeHtml(s.nombre)}</option>`).join('');
 
-        $('campana_id').innerHTML = '<option value="">Selecciona campaña...</option>' +
-            (campanas || []).map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join('');
+        $('campana_id').innerHTML = campanasVigentes.length
+            ? '<option value="">Selecciona campaña...</option>' +
+              campanasVigentes.map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join('')
+            : '<option value="">No hay campañas activas (crea una en Sectores y Campañas)</option>';
 
         // Cambio de modo: Flotador vs Lectura Directa
         const aplicarModo = (modo) => {
@@ -376,6 +397,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         habilitarAutoGuardadoFormulario('sectorForm');
         habilitarAutoGuardadoFormulario('campanaForm');
 
+        // --- 1. LÓGICA DE SECTORES ---
         const loadSectores = async () => {
             const { data, error } = await supabase.from('sectores')
                 .select('id, codigo, nombre, longitud_m, tipo_revestimiento, estado_infraestructura')
@@ -441,6 +463,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
+        // --- 2. LÓGICA DE CAMPAÑAS (AUTO-CIERRE + CONTROL MANUAL) ---
         const loadCampanas = async () => {
             const { data, error } = await supabase.from('campanas')
                 .select('id, nombre, fecha_inicio, fecha_fin, estado')
@@ -451,17 +474,80 @@ document.addEventListener('DOMContentLoaded', async () => {
                 tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Error: ${escapeHtml(error.message)}</td></tr>`;
                 return;
             }
-            tbody.innerHTML = data?.length ? data.map(c => `
-                <tr>
-                    <td><strong>${escapeHtml(c.nombre)}</strong></td>
-                    <td>${c.fecha_inicio || '—'}</td>
-                    <td>${c.fecha_fin || 'En curso'}</td>
-                    <td>${getStatusChip(c.estado)}</td>
-                    <td style="text-align:center;">
-                        <button onclick="window.eliminarCampana('${c.id}')" class="btn btn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem; color:var(--danger); border-color:#fecaca;">Eliminar</button>
-                    </td>
-                </tr>
-            `).join('') : '<tr><td colspan="5" style="text-align:center; padding:2rem;">No hay campañas registradas.</td></tr>';
+
+            const hoy = obtenerFechaLocalISO();
+            const campanas = data || [];
+
+            // Cerrar automáticamente campañas cuya fecha_fin ya venció
+            const vencidasIds = campanas
+                .filter(c => c.estado !== 'cerrada' && c.fecha_fin && c.fecha_fin < hoy)
+                .map(c => c.id);
+
+            if (vencidasIds.length > 0) {
+                const { error: autoCloseErr } = await supabase
+                    .from('campanas')
+                    .update({ estado: 'cerrada' })
+                    .in('id', vencidasIds);
+
+                if (!autoCloseErr) {
+                    campanas.forEach(c => {
+                        if (vencidasIds.includes(c.id)) c.estado = 'cerrada';
+                    });
+                }
+            }
+
+            tbody.innerHTML = campanas.length ? campanas.map(c => {
+                let botonesEstado = '';
+
+                if (c.estado === 'planificada') {
+                    botonesEstado = `
+                        <button onclick="window.cambiarEstadoCampana('${c.id}', 'en_curso', '${c.fecha_fin || ''}')" class="btn btn-primary" style="padding:0.25rem 0.55rem; font-size:0.75rem;">Iniciar</button>
+                        <button onclick="window.cambiarEstadoCampana('${c.id}', 'cerrada', '${c.fecha_fin || ''}')" class="btn btn-outline" style="padding:0.25rem 0.55rem; font-size:0.75rem;">Cerrar</button>
+                    `;
+                } else if (c.estado === 'en_curso') {
+                    botonesEstado = `
+                        <button onclick="window.cambiarEstadoCampana('${c.id}', 'cerrada', '${c.fecha_fin || ''}')" class="btn btn-outline" style="padding:0.25rem 0.55rem; font-size:0.75rem; color:var(--warning); border-color:#fde68a;">Cerrar</button>
+                    `;
+                } else if (c.estado === 'cerrada') {
+                    botonesEstado = `
+                        <button onclick="window.cambiarEstadoCampana('${c.id}', 'en_curso', '${c.fecha_fin || ''}')" class="btn btn-outline" style="padding:0.25rem 0.55rem; font-size:0.75rem;">Reabrir</button>
+                    `;
+                }
+
+                return `
+                    <tr>
+                        <td><strong>${escapeHtml(c.nombre)}</strong></td>
+                        <td>${c.fecha_inicio || '—'}</td>
+                        <td>${c.fecha_fin || (c.estado === 'cerrada' ? 'Cerrada manualmente' : 'Sin fecha límite')}</td>
+                        <td>${getStatusChip(c.estado)}</td>
+                        <td style="text-align:center; display:flex; gap:0.4rem; justify-content:center; flex-wrap:wrap;">
+                            ${botonesEstado}
+                            <button onclick="window.eliminarCampana('${c.id}')" class="btn btn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem; color:var(--danger); border-color:#fecaca;">Eliminar</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('') : '<tr><td colspan="5" style="text-align:center; padding:2rem;">No hay campañas registradas.</td></tr>';
+        };
+
+        window.cambiarEstadoCampana = async (id, nuevoEstado, fechaFinActual) => {
+            const hoy = obtenerFechaLocalISO();
+            const mensajes = {
+                en_curso: '¿Deseas activar esta campaña para habilitar el registro de mediciones?',
+                cerrada: '¿Deseas cerrar esta campaña? Ya no se podrán registrar nuevas mediciones en ella.'
+            };
+            if (!confirmAction(mensajes[nuevoEstado] || '¿Confirmas el cambio de estado?')) return;
+
+            const actualizacion = { estado: nuevoEstado };
+
+            if (nuevoEstado === 'cerrada' && !fechaFinActual) {
+                actualizacion.fecha_fin = hoy;
+            } else if (nuevoEstado === 'en_curso' && fechaFinActual && fechaFinActual < hoy) {
+                actualizacion.fecha_fin = null;
+            }
+
+            const { error } = await supabase.from('campanas').update(actualizacion).eq('id', id);
+            if (error) alert('No se pudo actualizar el estado: ' + error.message);
+            else await loadCampanas();
         };
 
         window.eliminarCampana = async (id) => {
@@ -478,11 +564,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             btn.textContent = 'Creando...';
 
             try {
+                const fechaInicio = document.getElementById('fecha_inicio').value;
+                let fechaFin = document.getElementById('fecha_fin').value || null;
+                let estado = document.getElementById('estado_campana').value;
+                const hoy = obtenerFechaLocalISO();
+
+                if (fechaFin && fechaFin < fechaInicio) {
+                    throw new Error('La fecha de fin no puede ser anterior a la fecha de inicio.');
+                }
+
+                if (fechaFin && fechaFin < hoy && estado !== 'cerrada') {
+                    estado = 'cerrada';
+                } else if (estado === 'cerrada' && !fechaFin) {
+                    fechaFin = hoy;
+                }
+
                 const payload = {
                     nombre: document.getElementById('nombre_campana').value.trim(),
-                    fecha_inicio: document.getElementById('fecha_inicio').value,
-                    fecha_fin: document.getElementById('fecha_fin').value || null,
-                    estado: document.getElementById('estado_campana').value,
+                    fecha_inicio: fechaInicio,
+                    fecha_fin: fechaFin,
+                    estado,
                     observaciones: document.getElementById('obs_campana').value.trim() || null,
                     creado_por: auth.user.id
                 };
@@ -723,7 +824,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             ? campanas.map(c => `<option value="${c.id}">${escapeHtml(c.nombre)} (${c.estado})</option>`).join('')
             : '<option value="">No hay campañas registradas</option>';
 
-        // Seleccionar por defecto la primera campaña "en_curso"
         const activa = (campanas || []).find(c => c.estado === 'en_curso');
         if (activa) filtroCampana.value = activa.id;
 
@@ -749,7 +849,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const registrosCampana = data || [];
 
-            // Tabla completa de la campaña
             aforosBody.innerHTML = registrosCampana.length ? registrosCampana.map(r => `
                 <tr>
                     <td><strong>${escapeHtml(r.sectores?.codigo || '—')}</strong> - ${escapeHtml(r.sectores?.nombre || '')}</td>
@@ -762,12 +861,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </tr>
             `).join('') : '<tr><td colspan="7" style="text-align:center;padding:1.5rem;">Sin registros en esta campaña.</td></tr>';
 
-            // Filtrar para el análisis secuencial (excluye rechazadas siempre)
             const validosParaAnalisis = registrosCampana.filter(r =>
                 soloAprobadas ? r.estado_revision === 'aprobada' : r.estado_revision !== 'requiere_correccion'
             );
 
-            // Tomar la medición más reciente por sector
             const latestBySector = new Map();
             validosParaAnalisis.forEach(r => {
                 const actual = latestBySector.get(r.sector_id);
@@ -782,7 +879,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return oa - ob || String(a.sectores?.codigo || '').localeCompare(String(b.sectores?.codigo || ''), 'es', { numeric: true });
             });
 
-            // Actualizar KPIs de resumen
             if (rows.length >= 1) {
                 const qIni = Number(rows[0].caudal_l_s);
                 const qFin = Number(rows[rows.length - 1].caudal_l_s);
