@@ -81,13 +81,23 @@
 
               <div class="field-grid">
                 <div>
-                  <label for="punto_medicion">Punto de Medición *</label>
-                  <input type="text" id="punto_medicion" required maxlength="100" placeholder="Ej. Entrada tramo / Punto medio">
+                  <label for="punto_medicion">Tipo de Punto *</label>
+                  <select id="punto_medicion" required>
+                    <option value="intermedio" selected>Punto Intermedio (Subtramo)</option>
+                    <option value="entrada">Entrada (Principal)</option>
+                    <option value="salida">Salida (Principal)</option>
+                    <option value="otro">Otro</option>
+                  </select>
                 </div>
                 <div>
                   <label for="fecha_hora">Fecha y Hora *</label>
                   <input type="datetime-local" id="fecha_hora" required>
                 </div>
+              </div>
+
+              <div>
+                <label for="referencia_punto">Referencia / Progresiva del Punto</label>
+                <input type="text" id="referencia_punto" maxlength="100" placeholder="Ej. Subtramo de 20 m - Tramo recto">
               </div>
 
               <!-- BLOQUE 1: CALCULADORA POR FLOTADOR -->
@@ -103,15 +113,15 @@
                   </div>
                   <div>
                     <label for="distancia_m">Distancia (m) *</label>
-                    <input type="number" id="distancia_m" min="0.01" step="0.01" placeholder="5.00">
+                    <input type="number" id="distancia_m" min="0.01" step="0.01" value="20.00" placeholder="20.00">
                   </div>
                 </div>
 
                 <div class="field-grid">
                   <div>
                     <label for="tiempos_s">Tiempos de recorrido (s) *</label>
-                    <input type="text" id="tiempos_s" placeholder="Ej. 10.2, 9.9, 10.1">
-                    <p class="hint">Puedes ingresar 1 tiempo o varios separados por coma para promediar.</p>
+                    <input type="text" id="tiempos_s" placeholder="Ej. 14.5 o 14.5, 14.2, 14.8">
+                    <p class="hint">Ingresa 1 tiempo o varios separados por coma para promediar.</p>
                   </div>
                   <div>
                     <label for="coeficiente">Coeficiente de velocidad *</label>
