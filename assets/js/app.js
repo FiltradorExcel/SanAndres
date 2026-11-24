@@ -48,7 +48,13 @@ function habilitarAutoGuardadoFormulario(formId, alRestaurarCallback) {
             if (Date.now() - timestamp < TTL_20_MINUTOS) {
                 Object.keys(datos).forEach(idCampo => {
                     const campo = form.querySelector(`#${idCampo}`);
-                    if (campo) campo.value = datos[idCampo];
+                    if (!campo) return;
+                    if (campo.tagName === 'SELECT') {
+                        const existeOpcion = Array.from(campo.options).some(opt => opt.value === datos[idCampo]);
+                        if (existeOpcion) campo.value = datos[idCampo];
+                    } else {
+                        campo.value = datos[idCampo];
+                    }
                 });
                 if (typeof alRestaurarCallback === 'function') alRestaurarCallback();
             } else {
@@ -153,7 +159,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await Promise.all([loadStats(), loadRecent()]);
     }
 
-    // ==========================================
+   // ==========================================
     // PÁGINA: MEDICIONES Y CALCULADORA (mediciones.html)
     // ==========================================
     else if (page === 'page-mediciones') {
@@ -262,21 +268,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            tbody.innerHTML = data?.length ? data.map(m => `
-                <tr>
-                    <td>
-                        <strong>${escapeHtml(m.sectores?.codigo || '—')} - ${escapeHtml(m.sectores?.nombre || 'N/A')}</strong><br>
-                        <small style="color:var(--text-muted);">${escapeHtml(m.punto_medicion)}</small>
-                    </td>
-                    <td><strong>${fmt(m.caudal_l_s)}</strong> L/s</td>
-                    <td><small>${formatearResumenAforo(m.detalle_aforo)}</small></td>
-                    <td>${formatDate(m.fecha_hora)}</td>
-                    <td>${getStatusChip(m.estado_revision)}</td>
-                    <td style="text-align:center;">
-                        <button onclick="window.eliminarMedicion('${m.id}')" class="btn btn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem; color:var(--danger); border-color:#fecaca;">Eliminar</button>
-                    </td>
-                </tr>
-            `).join('') : '<tr><td colspan="6" style="text-align:center; padding:2rem;">No hay mediciones registradas.</td></tr>';
+            tbody.innerHTML = data?.length ? data.map(m => {
+                const ref = m.detalle_aforo?.referencia_punto ? ` · ${escapeHtml(m.detalle_aforo.referencia_punto)}` : '';
+                return `
+                    <tr>
+                        <td>
+                            <strong>${escapeHtml(m.sectores?.codigo || '—')} - ${escapeHtml(m.sectores?.nombre || 'N/A')}</strong><br>
+                            <small style="color:var(--text-muted); text-transform:uppercase;">${escapeHtml(m.punto_medicion)}</small><small style="color:var(--text-muted);">${ref}</small>
+                        </td>
+                        <td><strong>${fmt(m.caudal_l_s)}</strong> L/s</td>
+                        <td><small>${formatearResumenAforo(m.detalle_aforo)}</small></td>
+                        <td>${formatDate(m.fecha_hora)}</td>
+                        <td>${getStatusChip(m.estado_revision)}</td>
+                        <td style="text-align:center;">
+                            <button onclick="window.eliminarMedicion('${m.id}')" class="btn btn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem; color:var(--danger); border-color:#fecaca;">Eliminar</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('') : '<tr><td colspan="6" style="text-align:center; padding:2rem;">No hay mediciones registradas.</td></tr>';
         };
 
         window.eliminarMedicion = async (id) => {
@@ -296,10 +305,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const modo = $('modo_registro').value;
                 const campanaId = $('campana_id').value;
                 const sectorId = $('sector_id').value;
-                const punto = $('punto_medicion').value.trim();
+                const punto = $('punto_medicion').value;
+                const referenciaPunto = $('referencia_punto').value.trim() || null;
 
-                if (!campanaId || !sectorId || !punto) {
-                    throw new Error('Completa campaña, sector y punto de medición.');
+                const puntosPermitidos = ['entrada', 'salida', 'intermedio', 'otro'];
+                if (!campanaId || !sectorId || !puntosPermitidos.includes(punto)) {
+                    throw new Error('Selecciona una campaña, un sector y un tipo de punto válido.');
                 }
 
                 let caudalFinal = 0;
@@ -320,6 +331,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     metodoTexto = 'Método del flotador con corrección de velocidad media';
                     detalleAforo = {
                         metodo: 'flotador',
+                        referencia_punto: referenciaPunto,
                         ancho_m: ancho,
                         profundidad_m: profundidad,
                         distancia_m: distancia,
@@ -345,6 +357,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     metodoTexto = `Aforo directo (${instrumento})`;
                     detalleAforo = {
                         metodo: 'directo',
+                        referencia_punto: referenciaPunto,
                         instrumento,
                         caudal_l_s: caudalFinal
                     };
@@ -368,6 +381,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 showMsg('formMsg', `Medición (${fmt(caudalFinal)} L/s) registrada y enviada a aprobación.`, 'success');
                 e.target.reset();
+                $('punto_medicion').value = 'intermedio';
+                $('distancia_m').value = '20.00';
                 $('coeficiente').value = '0.85';
                 $('fecha_hora').value = new Date().toISOString().slice(0, 16);
                 aplicarModo('flotador');
