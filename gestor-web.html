@@ -16,20 +16,20 @@
 
   <div class="app-layout">
     
-    <!-- Header / Sidebar -->
+    <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="brand"><span class="brand-mark">WEB</span><span>San Andrés</span></div>
       </div>
       
       <nav class="sidebar-nav">
-  <button class="nav-item active" data-target="sec-institucional">Institucional</button>
-  <button class="nav-item" data-target="sec-directorio">Directorio</button>
-  <button class="nav-item" data-target="sec-galeria">Galería</button>
-  <button class="nav-item" data-target="sec-noticias">Noticias</button>
-  <button class="nav-item" data-target="sec-comunicados">Comunicados</button>
-  <button class="nav-item" onclick="window.location.href='dashboard.html'" style="margin-top: 2rem; color: var(--danger); border: 1px solid var(--danger);">← Volver a SAGUA</button>
-</nav>
+        <button type="button" class="nav-item active" data-target="sec-institucional">Institucional</button>
+        <button type="button" class="nav-item" data-target="sec-directorio">Directorio</button>
+        <button type="button" class="nav-item" data-target="sec-galeria">Galería</button>
+        <button type="button" class="nav-item" data-target="sec-noticias">Noticias</button>
+        <button type="button" class="nav-item" data-target="sec-comunicados">Comunicados</button>
+        <button type="button" id="btnVolverSagua" class="nav-item-back" onclick="window.location.href='dashboard.html'" style="margin-top: 2rem; color: var(--danger); border: 1px solid var(--danger); background: transparent; padding: 0.75rem 1rem; border-radius: 8px; cursor: pointer; font-weight: 600; text-align: left;">← Volver a SAGUA</button>
+      </nav>
 
       <div class="user-widget" id="userMenuBtn">
         <div class="user-info">
@@ -56,8 +56,9 @@
           <div class="card-body">
             <form id="formInstitucional" class="form-grid">
               <input type="hidden" id="inst_id">
+              <input type="hidden" id="inst_logo_actual_path">
               <div class="full-width">
-                <label>Nombre de la Entidad</label>
+                <label>Nombre de la Entidad *</label>
                 <input type="text" id="inst_nombre" required>
               </div>
               <div>
@@ -78,7 +79,7 @@
               </div>
               <div>
                 <label>Enlace Facebook</label>
-                <input type="url" id="inst_facebook">
+                <input type="url" id="inst_facebook" placeholder="https://facebook.com/...">
               </div>
               <div class="full-width">
                 <label>Misión</label>
@@ -90,15 +91,15 @@
               </div>
               <div class="full-width">
                 <label>URL Google Maps (Iframe SRC)</label>
-                <input type="url" id="inst_mapa">
+                <input type="url" id="inst_mapa" placeholder="https://www.google.com/maps/embed?...">
               </div>
               
               <!-- Subida de Logo -->
               <div class="full-width">
-                <label>Logo Institucional</label>
-                <div class="file-upload-wrapper">
-                  <img id="previewLogo" class="img-preview hidden" alt="Logo actual" style="max-height: 100px; margin-bottom: 10px;">
-                  <input type="file" id="inst_logo" accept="image/*">
+                <label>Logo Institucional (PNG, JPG, WEBP — Máx. 5 MB)</label>
+                <div class="file-upload-wrapper" style="display: flex; flex-direction: column; gap: 10px;">
+                  <img id="previewLogo" class="img-preview hidden" alt="Vista previa del logo" style="max-height: 110px; max-width: 240px; object-fit: contain; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px; background: #f8fafc;">
+                  <input type="file" id="inst_logo" accept="image/png, image/jpeg, image/webp, image/svg+xml">
                 </div>
               </div>
               
@@ -114,10 +115,11 @@
       <section id="sec-directorio" class="tab-content">
         <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; align-items: start;">
           <div class="card">
-            <div class="card-header"><h3>Agregar Directivo</h3></div>
+            <div class="card-header"><h3 id="tituloFormDir">Agregar Directivo</h3></div>
             <div class="card-body">
               <form id="formDirectorio" class="form-stack">
                 <input type="hidden" id="dir_id">
+                <input type="hidden" id="dir_foto_actual_path">
                 <div>
                   <label>Nombre Completo *</label>
                   <input type="text" id="dir_nombre" required>
@@ -128,15 +130,16 @@
                 </div>
                 <div>
                   <label>Orden de Jerarquía (1 es mayor)</label>
-                  <input type="number" id="dir_orden" value="0">
+                  <input type="number" id="dir_orden" value="1" min="0">
                 </div>
                 <div>
                   <label>Descripción / Perfil</label>
                   <textarea id="dir_desc" rows="2"></textarea>
                 </div>
                 <div>
-                  <label>Fotografía</label>
-                  <input type="file" id="dir_foto" accept="image/*">
+                  <label>Fotografía (Máx. 5 MB)</label>
+                  <img id="previewDirectorio" class="img-preview hidden" alt="Vista previa directivo" style="width: 90px; height: 90px; object-fit: cover; border-radius: 50%; border: 2px solid #e2e8f0; margin-bottom: 8px; display: block;">
+                  <input type="file" id="dir_foto" accept="image/png, image/jpeg, image/webp">
                 </div>
                 <div style="display: flex; gap: 10px;">
                   <button type="submit" class="btn btn-primary btn-full" id="btnGuardarDir">Guardar</button>
@@ -186,12 +189,15 @@
                   <option value="eventos">Eventos</option>
                 </select>
               </div>
-              <div style="flex: 1; min-width: 200px;">
-                <label>Imagen *</label>
-                <input type="file" id="gal_imagen" required accept="image/*">
+              <div style="flex: 1; min-width: 220px;">
+                <label>Imagen * (Máx. 5 MB)</label>
+                <input type="file" id="gal_imagen" required accept="image/png, image/jpeg, image/webp">
               </div>
               <div>
                 <button type="submit" class="btn btn-primary">Subir Imagen</button>
+              </div>
+              <div class="full-width" style="width: 100%;">
+                <img id="previewGaleria" class="img-preview hidden" alt="Vista previa galería" style="max-height: 160px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 6px; object-fit: cover;">
               </div>
             </form>
           </div>
@@ -204,7 +210,7 @@
       <section id="sec-noticias" class="tab-content">
         <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; align-items: start;">
           <div class="card">
-            <div class="card-header"><h3>Publicar Noticia</h3></div>
+            <div class="card-header"><h3 id="tituloFormNoticia">Publicar Noticia</h3></div>
             <div class="card-body">
               <form id="formNoticia" class="form-stack">
                 <input type="hidden" id="not_id">
@@ -261,7 +267,7 @@
       <section id="sec-comunicados" class="tab-content">
         <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; align-items: start;">
           <div class="card">
-            <div class="card-header"><h3>Emitir Comunicado</h3></div>
+            <div class="card-header"><h3 id="tituloFormComunicado">Emitir Comunicado</h3></div>
             <div class="card-body">
               <form id="formComunicado" class="form-stack">
                 <input type="hidden" id="com_id">
